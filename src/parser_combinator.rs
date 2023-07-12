@@ -52,7 +52,7 @@ impl <'a,  Output> Parser<'a> for ParserFn<'a,  Output>{
     }
 }
 
-pub fn pchar<'a>(c:char) -> ParserFn<'a, char> {
+pub fn pchar<'a>(c:char) -> impl Parser <'a, Output = char> {
     ParserFn::new(Rc::new(move |input: ParserState| {
         let mut chars = input.remaining.chars();
         match chars.next() {
