@@ -1,10 +1,11 @@
+use crate::parser_combinator::Parser;
+
 mod parser_combinator;
-use parser_combinator::Parser;
 
 fn main() {
-    let h_parser = parser_combinator::pchar('H');
-
-    let result = h_parser.parse("".into());
+    let true_parser = parser_combinator::pstring("true");
+    //let bool_parser = parser_combinator::pmap(true_parser, &|_| true);
+    let result = true_parser.parse("Hello World".into());
 
     println!("{:?}", result);
 }

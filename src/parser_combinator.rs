@@ -77,6 +77,22 @@ pub fn pchar<'a>(c: char) -> impl Parser<'a, Output = char> {
     }))
 }
 
+pub fn pstring<'a>(s: &'static str) -> impl Parser<'a, Output = &'a str> + 'a {
+    ParserFn::new(Rc::new(move |state: ParserState| {
+        let startswith = state.remaining.starts_with(s);
+        if startswith {
+            let parser_state = state.advance(s.len());
+            Ok((s, parser_state))
+        } else {
+            let mut chars = state.remaining.chars();
+            match chars.next() {
+                Some(letter) => Err(format_error(s, letter, &state)),
+                None => Err(format_error(s, "EOF", &state)),
+            }
+        }
+    }))
+}
+
 mod tests {
     use super::*;
 
@@ -105,6 +121,36 @@ mod tests {
             ParserState {
                 remaining: "",
                 position: 1,
+            },
+        ));
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_pstring_eof() {
+        let h_parser = pstring("Hello");
+        let result = h_parser.parse("".into());
+        let expected = Err("Expected 'Hello' but got 'EOF' at 0".to_string());
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_pstring_wrong_letter() {
+        let h_parser = pstring("Hello");
+        let result = h_parser.parse("c".into());
+        let expected = Err("Expected 'Hello' but got 'c' at 0".to_string());
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_pstring_success() {
+        let h_parser = pstring("Hello");
+        let result = h_parser.parse("Hello".into());
+        let expected = Ok((
+            "Hello",
+            ParserState {
+                remaining: "",
+                position: 5,
             },
         ));
         assert_eq!(result, expected);
