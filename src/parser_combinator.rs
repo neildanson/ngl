@@ -1,6 +1,6 @@
 use std::rc::Rc;
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct ParserState<'a> {
     remaining : &'a str,
     position : usize, //TODO add line numbers
@@ -66,8 +66,39 @@ pub fn pchar<'a>(c:char) -> impl Parser <'a, Output = char> {
                 let parser_state = state.advance(1);
                 Ok((c, parser_state))
             },
-            Some(letter) => Err(format_error('c', letter, &state)),
-            None => Err(format_error('c', "EOF", &state)),
+            Some(letter) => Err(format_error(c, letter, &state)),
+            None => Err(format_error(c, "EOF", &state)),
         }
     }))
+}
+
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_pchar_eof() {
+        let h_parser = pchar('H');
+
+        let result = h_parser.parse("".into());
+        let expected = Err("Expected 'H' but got 'EOF' at 0".to_string());
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_pchar_wrong_letter() {
+        let h_parser = pchar('H');
+
+        let result = h_parser.parse("c".into());
+        let expected = Err("Expected 'H' but got 'c' at 0".to_string());
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_pchar_success() {
+        let h_parser = pchar('H');
+
+        let result = h_parser.parse("H".into());
+        let expected = Ok(('H', ParserState { remaining: "", position: 1 }));
+        assert_eq!(result, expected);
+    }
 }
