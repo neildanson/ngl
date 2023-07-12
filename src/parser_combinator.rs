@@ -1,12 +1,29 @@
 use std::rc::Rc;
 
 #[derive(Debug, PartialEq)]
-pub struct ParserState<'a> {
+pub struct Token<T> {
+    value: T,
+    start: usize,
+    length: usize,
+}
+
+impl<T> Token<T> {
+    pub fn new(value: T, start: usize, length: usize) -> Self {
+        Self {
+            value,
+            start,
+            length,
+        }
+    }
+}
+
+#[derive(Debug, PartialEq)]
+pub struct ContinuationState<'a> {
     remaining: &'a str,
     position: usize, //TODO add line numbers
 }
 
-impl<'a> ParserState<'a> {
+impl<'a> ContinuationState<'a> {
     fn new(input: &'a str) -> Self {
         Self {
             remaining: input,
@@ -22,7 +39,7 @@ impl<'a> ParserState<'a> {
     }
 }
 
-impl<'a> From<&'a str> for ParserState<'a> {
+impl<'a> From<&'a str> for ContinuationState<'a> {
     fn from(input: &'a str) -> Self {
         Self::new(input)
     }
@@ -30,16 +47,22 @@ impl<'a> From<&'a str> for ParserState<'a> {
 
 pub trait Parser<'a> {
     type Output;
-    fn parse(&self, input: ParserState<'a>) -> Result<(Self::Output, ParserState<'a>), String>;
+    fn parse(
+        &self,
+        input: ContinuationState<'a>,
+    ) -> Result<(Token<Self::Output>, ContinuationState<'a>), String>;
 }
 
 struct ParserFn<'a, Output> {
-    parser: Rc<dyn Fn(ParserState<'a>) -> Result<(Output, ParserState<'a>), String>>,
+    parser:
+        Rc<dyn Fn(ContinuationState<'a>) -> Result<(Token<Output>, ContinuationState<'a>), String>>,
 }
 
 impl<'a, Output> ParserFn<'a, Output> {
     pub fn new(
-        parser: Rc<dyn Fn(ParserState<'a>) -> Result<(Output, ParserState<'a>), String>>,
+        parser: Rc<
+            dyn Fn(ContinuationState<'a>) -> Result<(Token<Output>, ContinuationState<'a>), String>,
+        >,
     ) -> Self {
         Self { parser }
     }
@@ -47,12 +70,15 @@ impl<'a, Output> ParserFn<'a, Output> {
 
 impl<'a, Output> Parser<'a> for ParserFn<'a, Output> {
     type Output = Output;
-    fn parse(&self, input: ParserState<'a>) -> Result<(Output, ParserState<'a>), String> {
+    fn parse(
+        &self,
+        input: ContinuationState<'a>,
+    ) -> Result<(Token<Output>, ContinuationState<'a>), String> {
         (self.parser)(input)
     }
 }
 
-fn format_error<T, U>(expected: T, actual: U, state: &ParserState) -> String
+fn format_error<T, U>(expected: T, actual: U, state: &ContinuationState) -> String
 where
     T: std::fmt::Display,
     U: std::fmt::Display,
@@ -64,12 +90,12 @@ where
 }
 
 pub fn pchar<'a>(c: char) -> impl Parser<'a, Output = char> {
-    ParserFn::new(Rc::new(move |state: ParserState| {
+    ParserFn::new(Rc::new(move |state: ContinuationState| {
         let mut chars = state.remaining.chars();
         match chars.next() {
             Some(letter) if letter == c => {
                 let parser_state = state.advance(1);
-                Ok((c, parser_state))
+                Ok((Token::new(c, state.position, 1), parser_state))
             }
             Some(letter) => Err(format_error(c, letter, &state)),
             None => Err(format_error(c, "EOF", &state)),
@@ -78,11 +104,11 @@ pub fn pchar<'a>(c: char) -> impl Parser<'a, Output = char> {
 }
 
 pub fn pstring<'a>(s: &'static str) -> impl Parser<'a, Output = &'a str> + 'a {
-    ParserFn::new(Rc::new(move |state: ParserState| {
+    ParserFn::new(Rc::new(move |state: ContinuationState| {
         let startswith = state.remaining.starts_with(s);
         if startswith {
             let parser_state = state.advance(s.len());
-            Ok((s, parser_state))
+            Ok((Token::new(s, state.position, s.len()), parser_state))
         } else {
             let mut chars = state.remaining.chars();
             match chars.next() {
@@ -117,8 +143,12 @@ mod tests {
         let h_parser = pchar('H');
         let result = h_parser.parse("H".into());
         let expected = Ok((
-            'H',
-            ParserState {
+            Token {
+                value: 'H',
+                start: 0,
+                length: 1,
+            },
+            ContinuationState {
                 remaining: "",
                 position: 1,
             },
@@ -147,8 +177,12 @@ mod tests {
         let h_parser = pstring("Hello");
         let result = h_parser.parse("Hello".into());
         let expected = Ok((
-            "Hello",
-            ParserState {
+            Token {
+                value: "Hello",
+                start: 0,
+                length: 5,
+            },
+            ContinuationState {
                 remaining: "",
                 position: 5,
             },
