@@ -1,0 +1,24 @@
+{
+    // See https://go.microsoft.com/fwlink/?LinkId=733558
+    // for the documentation about the tasks.json format
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Start DB",
+            "type": "shell",
+            "command": "./scripts/init_db.sh",
+            "runOptions": { "runOn": "folderOpen" }
+        },
+        {
+            "label": "Cargo Watch",
+            "type": "shell",
+            "command": "cargo watch -x check -x fmt -x test",
+            "runOptions": { "runOn": "folderOpen" }
+        },
+        {
+            "label": "Cargo Format",
+            "type": "shell",
+            "command": "cargo fmt",
+        }
+    ]
+}
