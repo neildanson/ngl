@@ -69,12 +69,19 @@ pub fn pchar<'a>(c: char, state: ContinuationState<'a>) -> ParseResult<'a, char>
 }
 
 #[macro_export]
+macro_rules! pchar {
+    ($value1:expr) => {{
+        |cont| pchar($value1, cont)
+    }};
+}
+
+#[macro_export]
 macro_rules! pthen {
-    ($parser1:ident => $value1:expr, $parser2:ident => $value2:expr, $input : expr) => {{
-        let result1 = $parser1($value1, $input);
+    ($parser1 : expr, $parser2 : expr, $input : expr) => {{
+        let result1 = $parser1($input);
         match result1 {
             Ok((token1, state1)) => {
-                let result2 = $parser2($value2, state1);
+                let result2 = $parser2(state1);
                 match result2 {
                     Ok((token2, state2)) => {
                         let token = Token::new(
@@ -92,25 +99,27 @@ macro_rules! pthen {
     }};
 }
 
+/*
 #[macro_export]
 macro_rules! por {
     ($parser1:ident => $value1:expr, $parser2:ident => $value2:expr, $input : expr) => {{
         let result1 = $parser1($value1, $input);
         match result1 {
-            Err(_) => {
+            Err(error1) => {
                 let result2 = $parser2($value2, $input);
                 match result2 {
                     Ok((token2, state2)) => {
                         let token = Token::new(token2.value, token2.start, token2.length);
                         Ok((token, state2))
                     }
-                    Err(e) => Err(e), //TODO combine errors
+                    Err(_error2) => Err(error1), //TODO combine errors
                 }
             }
             Ok((token1, state1)) => Ok((token1, state1)),
         }
     }};
 }
+ */
 
 mod tests {
     use super::*;
@@ -148,7 +157,7 @@ mod tests {
 
     #[test]
     fn test_pthen_success_1() {
-        let result = pthen!(pchar =>'H', pchar => 'e', "Hello".into());
+        let result = pthen!(pchar!('H'), pchar!('e'), "Hello".into());
         let expected = Ok((
             Token {
                 value: ('H', 'e'),
@@ -165,7 +174,7 @@ mod tests {
 
     #[test]
     fn test_pthen_success_2() {
-        let result = pthen!(pchar =>'H', pchar => 'e', "He".into());
+        let result = pthen!(pchar!('H'), pchar!('e'), "He".into());
         let expected = Ok((
             Token {
                 value: ('H', 'e'),
@@ -180,6 +189,7 @@ mod tests {
         assert_eq!(result, expected);
     }
 
+    /*
     #[test]
     fn test_por_success_1() {
         let result = por!(pchar =>'H', pchar => 'h', "H".into());
@@ -214,7 +224,7 @@ mod tests {
         assert_eq!(result, expected);
     }
 
-    /*#[test]
+    #[test]
 
     fn test_pstring_eof() {
         let h_parser = pstring("Hello");
