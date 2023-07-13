@@ -1,3 +1,5 @@
+use std::fmt::{self, Debug, Display, Formatter};
+
 #[derive(Debug, PartialEq)]
 pub struct Token<T> {
     pub value: T,
@@ -43,18 +45,42 @@ impl<'a> From<&'a str> for ContinuationState<'a> {
     }
 }
 
-fn format_error<T, U>(expected: T, actual: U, state: &ContinuationState) -> String
-where
-    T: std::fmt::Display,
-    U: std::fmt::Display,
-{
-    format!(
-        "Expected '{}' but got '{}' at {}",
-        expected, actual, state.position
-    )
+#[derive(PartialEq)]
+pub struct Error {
+    expected: String,
+    actual: String,
+    position: usize,
 }
 
-pub type ParseResult<'a, Output> = Result<(Token<Output>, ContinuationState<'a>), String>;
+impl Error {
+    fn new(expected: String, actual: String, position: usize) -> Self {
+        Self {
+            expected,
+            actual,
+            position,
+        }
+    }
+    fn format_error(&self) -> String {
+        format!(
+            "Expected '{}' but got '{}' at {}",
+            self.expected, self.actual, self.position
+        )
+    }
+}
+
+impl Display for Error {
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+        write!(f, "{}", self.format_error())
+    }
+}
+
+impl Debug for Error {
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+        write!(f, "{}", self.format_error())
+    }
+}
+
+pub type ParseResult<'a, Output> = Result<(Token<Output>, ContinuationState<'a>), Error>;
 
 pub fn pchar<'a>(c: char, state: ContinuationState<'a>) -> ParseResult<'a, char> {
     let mut chars = state.remaining.chars();
@@ -63,8 +89,12 @@ pub fn pchar<'a>(c: char, state: ContinuationState<'a>) -> ParseResult<'a, char>
             let parser_state = state.advance(1);
             Ok((Token::new(c, state.position, 1), parser_state))
         }
-        Some(letter) => Err(format_error(c, letter, &state)),
-        None => Err(format_error(c, "EOF", &state)),
+        Some(letter) => Err(Error::new(
+            c.to_string(),
+            letter.to_string(),
+            state.position,
+        )),
+        None => Err(Error::new(c.to_string(), "EOF".to_string(), state.position)),
     }
 }
 
@@ -125,14 +155,14 @@ mod tests {
     #[test]
     fn test_pchar_eof() {
         let result = pchar('H', "".into());
-        let expected = Err("Expected 'H' but got 'EOF' at 0".to_string());
+        let expected = Err(Error::new("H".to_string(), "EOF".to_string(), 0));
         assert_eq!(result, expected);
     }
 
     #[test]
     fn test_pchar_wrong_letter() {
         let result = pchar('H', "c".into());
-        let expected = Err("Expected 'H' but got 'c' at 0".to_string());
+        let expected = Err(Error::new("H".to_string(), "c".to_string(), 0));
         assert_eq!(result, expected);
     }
 
