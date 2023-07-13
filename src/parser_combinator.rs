@@ -110,23 +110,17 @@ macro_rules! pthen {
     ($parser1 : expr, $parser2 : expr) => {{
         move |input| {
             let result1 = $parser1(input);
-            match result1 {
-                Ok((token1, state1)) => {
-                    let result2 = $parser2(state1);
-                    match result2 {
-                        Ok((token2, state2)) => {
-                            let token = Token::new(
-                                (token1.value, token2.value),
-                                token1.start,
-                                token1.length + token2.length,
-                            );
-                            Ok((token, state2))
-                        }
-                        Err(e) => Err(e),
-                    }
-                }
-                Err(e) => Err(e),
-            }
+            result1.and_then(|(token1, state1)| {
+                let result2 = $parser2(state1);
+                result2.map(|(token2, state2)| {
+                    let token = Token::new(
+                        (token1.value, token2.value),
+                        token1.start,
+                        token1.length + token2.length,
+                    );
+                    (token, state2)
+                })
+            })
         }
     }};
 }
@@ -136,19 +130,7 @@ macro_rules! por {
     ($parser1 : expr, $parser2 : expr) => {{
         move |input| {
             let result1 = $parser1(input);
-            match result1 {
-                Err(error1) => {
-                    let result2 = $parser2(input);
-                    match result2 {
-                        Ok((token2, state2)) => {
-                            let token = Token::new(token2.value, token2.start, token2.length);
-                            Ok((token, state2))
-                        }
-                        Err(_error2) => Err(error1), //TODO combine errors
-                    }
-                }
-                Ok((token1, state1)) => Ok((token1, state1)),
-            }
+            result1.or_else(|_error1| $parser2(input))
         }
     }};
 }
@@ -158,14 +140,11 @@ macro_rules! pmap {
     ($parser1 : expr, $f : expr) => {{
         move |input| {
             let result1 = $parser1(input);
-            match result1 {
-                Ok((token, state)) => {
-                    let result = $f(token.value);
-                    let token = Token::new(result, token.start, token.length);
-                    Ok((token, state))
-                }
-                Err(e) => Err(e),
-            }
+            result1.map(|(token, state)| {
+                let result = $f(token.value);
+                let token = Token::new(result, token.start, token.length);
+                (token, state)
+            })
         }
     }};
 }
@@ -175,21 +154,24 @@ mod tests {
 
     #[test]
     fn test_pchar_eof() {
-        let result = pchar('H', "".into());
+        let parser = pchar!('H');
+        let result = parser("".into());
         let expected = Err(Error::new("H".to_string(), "EOF".to_string(), 0));
         assert_eq!(result, expected);
     }
 
     #[test]
     fn test_pchar_wrong_letter() {
-        let result = pchar('H', "c".into());
+        let parser = pchar!('H');
+        let result = parser("c".into());
         let expected = Err(Error::new("H".to_string(), "c".to_string(), 0));
         assert_eq!(result, expected);
     }
 
     #[test]
     fn test_pchar_success() {
-        let result = pchar('H', "H".into());
+        let parser = pchar!('H');
+        let result = parser("H".into());
         let expected = Ok((
             Token {
                 value: 'H',
