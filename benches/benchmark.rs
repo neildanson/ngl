@@ -2,7 +2,6 @@ extern crate ngl;
 
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 
-use ngl::parser_combinator::*;
 use ngl::*;
 
 fn parse_success(c: &mut Criterion) {
