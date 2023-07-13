@@ -68,19 +68,47 @@ pub fn pchar<'a>(c: char, state: ContinuationState<'a>) -> ParseResult<'a, char>
     }
 }
 
-//pthen!(pchar('H'), pchar('e'), pchar('l'), pchar('l'), pchar('o'));
-
 #[macro_export]
 macro_rules! pthen {
     ($parser1:ident => $value1:expr, $parser2:ident => $value2:expr, $input : expr) => {{
-        let result1 = $parser1($value1, $input)?;
-        let result2 = $parser2($value2, result1.1)?;
-        let token = Token::new(
-            (result1.0.value, result2.0.value),
-            result1.0.start,
-            result1.0.length + result2.0.length,
-        );
-        Ok((token, result2.1))
+        let result1 = $parser1($value1, $input);
+        match result1 {
+            Ok((token1, state1)) => {
+                let result2 = $parser2($value2, state1);
+                match result2 {
+                    Ok((token2, state2)) => {
+                        let token = Token::new(
+                            (token1.value, token2.value),
+                            token1.start,
+                            token1.length + token2.length,
+                        );
+                        Ok((token, state2))
+                    }
+                    Err(e) => Err(e),
+                }
+            }
+            Err(e) => Err(e),
+        }
+    }};
+}
+
+#[macro_export]
+macro_rules! por {
+    ($parser1:ident => $value1:expr, $parser2:ident => $value2:expr, $input : expr) => {{
+        let result1 = $parser1($value1, $input);
+        match result1 {
+            Err(_) => {
+                let result2 = $parser2($value2, $input);
+                match result2 {
+                    Ok((token2, state2)) => {
+                        let token = Token::new(token2.value, token2.start, token2.length);
+                        Ok((token, state2))
+                    }
+                    Err(e) => Err(e), //TODO combine errors
+                }
+            }
+            Ok((token1, state1)) => Ok((token1, state1)),
+        }
     }};
 }
 
@@ -107,6 +135,74 @@ mod tests {
         let expected = Ok((
             Token {
                 value: 'H',
+                start: 0,
+                length: 1,
+            },
+            ContinuationState {
+                remaining: "",
+                position: 1,
+            },
+        ));
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_pthen_success_1() {
+        let result = pthen!(pchar =>'H', pchar => 'e', "Hello".into());
+        let expected = Ok((
+            Token {
+                value: ('H', 'e'),
+                start: 0,
+                length: 2,
+            },
+            ContinuationState {
+                remaining: "llo",
+                position: 2,
+            },
+        ));
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_pthen_success_2() {
+        let result = pthen!(pchar =>'H', pchar => 'e', "He".into());
+        let expected = Ok((
+            Token {
+                value: ('H', 'e'),
+                start: 0,
+                length: 2,
+            },
+            ContinuationState {
+                remaining: "",
+                position: 2,
+            },
+        ));
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_por_success_1() {
+        let result = por!(pchar =>'H', pchar => 'h', "H".into());
+        let expected = Ok((
+            Token {
+                value: 'H',
+                start: 0,
+                length: 1,
+            },
+            ContinuationState {
+                remaining: "",
+                position: 1,
+            },
+        ));
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_por_success_2() {
+        let result = por!(pchar =>'H', pchar => 'h', "h".into());
+        let expected = Ok((
+            Token {
+                value: 'h',
                 start: 0,
                 length: 1,
             },
