@@ -1,10 +1,8 @@
-use std::rc::Rc;
-
 #[derive(Debug, PartialEq)]
 pub struct Token<T> {
-    value: T,
-    start: usize,
-    length: usize,
+    pub value: T,
+    pub start: usize,
+    pub length: usize,
 }
 
 impl<T> Token<T> {
@@ -56,10 +54,9 @@ where
     )
 }
 
-pub fn pchar<'a>(
-    c: char,
-    state: ContinuationState<'a>,
-) -> Result<(Token<char>, ContinuationState<'a>), String> {
+pub type ParseResult<'a, Output> = Result<(Token<Output>, ContinuationState<'a>), String>;
+
+pub fn pchar<'a>(c: char, state: ContinuationState<'a>) -> ParseResult<'a, char> {
     let mut chars = state.remaining.chars();
     match chars.next() {
         Some(letter) if letter == c => {
@@ -69,6 +66,22 @@ pub fn pchar<'a>(
         Some(letter) => Err(format_error(c, letter, &state)),
         None => Err(format_error(c, "EOF", &state)),
     }
+}
+
+//pthen!(pchar('H'), pchar('e'), pchar('l'), pchar('l'), pchar('o'));
+
+#[macro_export]
+macro_rules! pthen {
+    ($parser1:ident => $value1:expr, $parser2:ident => $value2:expr, $input : expr) => {{
+        let result1 = $parser1($value1, $input)?;
+        let result2 = $parser2($value2, result1.1)?;
+        let token = Token::new(
+            (result1.0.value, result2.0.value),
+            result1.0.start,
+            result1.0.length + result2.0.length,
+        );
+        Ok((token, result2.1))
+    }};
 }
 
 mod tests {
