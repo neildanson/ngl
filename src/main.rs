@@ -3,11 +3,8 @@ mod parser_combinator;
 use parser_combinator::*;
 
 fn main() {
-    //TODO how to combine
-    //pthen does not take 2 parameters, but a function
-    //let h = move |input| { por!(pchar => 'H', pchar => 'h', input) };
-    //h("Hello".into());
+    let h = move |x| por!(pchar!('H'), pchar!('h'), x);
 
-    let result = pthen!(pchar!('H'), pchar!('e'), "Hello".into());
+    let result = pthen!(h, pchar!('e'), "hello".into());
     println!("{:?}", result);
 }

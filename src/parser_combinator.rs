@@ -15,7 +15,7 @@ impl<T> Token<T> {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone, Copy)]
 pub struct ContinuationState<'a> {
     remaining: &'a str,
     position: usize, //TODO add line numbers
@@ -99,14 +99,13 @@ macro_rules! pthen {
     }};
 }
 
-/*
 #[macro_export]
 macro_rules! por {
-    ($parser1:ident => $value1:expr, $parser2:ident => $value2:expr, $input : expr) => {{
-        let result1 = $parser1($value1, $input);
+    ($parser1 : expr, $parser2 : expr, $input : expr) => {{
+        let result1 = $parser1($input);
         match result1 {
             Err(error1) => {
-                let result2 = $parser2($value2, $input);
+                let result2 = $parser2($input);
                 match result2 {
                     Ok((token2, state2)) => {
                         let token = Token::new(token2.value, token2.start, token2.length);
@@ -119,7 +118,6 @@ macro_rules! por {
         }
     }};
 }
- */
 
 mod tests {
     use super::*;
@@ -189,10 +187,9 @@ mod tests {
         assert_eq!(result, expected);
     }
 
-    /*
     #[test]
     fn test_por_success_1() {
-        let result = por!(pchar =>'H', pchar => 'h', "H".into());
+        let result = por!(pchar!('H'), pchar!('h'), "H".into());
         let expected = Ok((
             Token {
                 value: 'H',
@@ -209,7 +206,7 @@ mod tests {
 
     #[test]
     fn test_por_success_2() {
-        let result = por!(pchar =>'H', pchar => 'h', "h".into());
+        let result = por!(pchar!('H'), pchar!('h'), "h".into());
         let expected = Ok((
             Token {
                 value: 'h',
@@ -224,6 +221,7 @@ mod tests {
         assert_eq!(result, expected);
     }
 
+    /*
     #[test]
 
     fn test_pstring_eof() {
