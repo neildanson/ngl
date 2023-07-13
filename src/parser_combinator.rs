@@ -45,39 +45,6 @@ impl<'a> From<&'a str> for ContinuationState<'a> {
     }
 }
 
-pub trait Parser<'a> {
-    type Output;
-    fn parse(
-        &self,
-        input: ContinuationState<'a>,
-    ) -> Result<(Token<Self::Output>, ContinuationState<'a>), String>;
-}
-
-struct ParserFn<'a, Output> {
-    parser:
-        Rc<dyn Fn(ContinuationState<'a>) -> Result<(Token<Output>, ContinuationState<'a>), String>>,
-}
-
-impl<'a, Output> ParserFn<'a, Output> {
-    pub fn new(
-        parser: Rc<
-            dyn Fn(ContinuationState<'a>) -> Result<(Token<Output>, ContinuationState<'a>), String>,
-        >,
-    ) -> Self {
-        Self { parser }
-    }
-}
-
-impl<'a, Output> Parser<'a> for ParserFn<'a, Output> {
-    type Output = Output;
-    fn parse(
-        &self,
-        input: ContinuationState<'a>,
-    ) -> Result<(Token<Output>, ContinuationState<'a>), String> {
-        (self.parser)(input)
-    }
-}
-
 fn format_error<T, U>(expected: T, actual: U, state: &ContinuationState) -> String
 where
     T: std::fmt::Display,
@@ -89,34 +56,19 @@ where
     )
 }
 
-pub fn pchar<'a>(c: char) -> impl Parser<'a, Output = char> {
-    ParserFn::new(Rc::new(move |state: ContinuationState| {
-        let mut chars = state.remaining.chars();
-        match chars.next() {
-            Some(letter) if letter == c => {
-                let parser_state = state.advance(1);
-                Ok((Token::new(c, state.position, 1), parser_state))
-            }
-            Some(letter) => Err(format_error(c, letter, &state)),
-            None => Err(format_error(c, "EOF", &state)),
+pub fn pchar<'a>(
+    c: char,
+    state: ContinuationState<'a>,
+) -> Result<(Token<char>, ContinuationState<'a>), String> {
+    let mut chars = state.remaining.chars();
+    match chars.next() {
+        Some(letter) if letter == c => {
+            let parser_state = state.advance(1);
+            Ok((Token::new(c, state.position, 1), parser_state))
         }
-    }))
-}
-
-pub fn pstring<'a>(s: &'static str) -> impl Parser<'a, Output = &'a str> + 'a {
-    ParserFn::new(Rc::new(move |state: ContinuationState| {
-        let startswith = state.remaining.starts_with(s);
-        if startswith {
-            let parser_state = state.advance(s.len());
-            Ok((Token::new(s, state.position, s.len()), parser_state))
-        } else {
-            let mut chars = state.remaining.chars();
-            match chars.next() {
-                Some(letter) => Err(format_error(s, letter, &state)),
-                None => Err(format_error(s, "EOF", &state)),
-            }
-        }
-    }))
+        Some(letter) => Err(format_error(c, letter, &state)),
+        None => Err(format_error(c, "EOF", &state)),
+    }
 }
 
 mod tests {
@@ -124,24 +76,21 @@ mod tests {
 
     #[test]
     fn test_pchar_eof() {
-        let h_parser = pchar('H');
-        let result = h_parser.parse("".into());
+        let result = pchar('H', "".into());
         let expected = Err("Expected 'H' but got 'EOF' at 0".to_string());
         assert_eq!(result, expected);
     }
 
     #[test]
     fn test_pchar_wrong_letter() {
-        let h_parser = pchar('H');
-        let result = h_parser.parse("c".into());
+        let result = pchar('H', "c".into());
         let expected = Err("Expected 'H' but got 'c' at 0".to_string());
         assert_eq!(result, expected);
     }
 
     #[test]
     fn test_pchar_success() {
-        let h_parser = pchar('H');
-        let result = h_parser.parse("H".into());
+        let result = pchar('H', "H".into());
         let expected = Ok((
             Token {
                 value: 'H',
@@ -156,7 +105,8 @@ mod tests {
         assert_eq!(result, expected);
     }
 
-    #[test]
+    /*#[test]
+
     fn test_pstring_eof() {
         let h_parser = pstring("Hello");
         let result = h_parser.parse("".into());
@@ -188,5 +138,5 @@ mod tests {
             },
         ));
         assert_eq!(result, expected);
-    }
+    }*/
 }
