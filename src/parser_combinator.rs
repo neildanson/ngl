@@ -153,6 +153,23 @@ macro_rules! por {
     }};
 }
 
+#[macro_export]
+macro_rules! pmap {
+    ($parser1 : expr, $f : expr) => {{
+        move |input| {
+            let result1 = $parser1(input);
+            match result1 {
+                Ok((token, state)) => {
+                    let result = $f(token.value);
+                    let token = Token::new(result, token.start, token.length);
+                    Ok((token, state))
+                }
+                Err(e) => Err(e),
+            }
+        }
+    }};
+}
+
 mod tests {
     use super::*;
 
@@ -248,6 +265,24 @@ mod tests {
         let expected = Ok((
             Token {
                 value: 'h',
+                start: 0,
+                length: 1,
+            },
+            ContinuationState {
+                remaining: "",
+                position: 1,
+            },
+        ));
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_pmap_success() {
+        let parser = pmap!(pchar!('T'), |_| true);
+        let result = parser("T".into());
+        let expected = Ok((
+            Token {
+                value: true,
                 start: 0,
                 length: 1,
             },
