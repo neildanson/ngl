@@ -107,44 +107,48 @@ macro_rules! pchar {
 
 #[macro_export]
 macro_rules! pthen {
-    ($parser1 : expr, $parser2 : expr, $input : expr) => {{
-        let result1 = $parser1($input);
-        match result1 {
-            Ok((token1, state1)) => {
-                let result2 = $parser2(state1);
-                match result2 {
-                    Ok((token2, state2)) => {
-                        let token = Token::new(
-                            (token1.value, token2.value),
-                            token1.start,
-                            token1.length + token2.length,
-                        );
-                        Ok((token, state2))
+    ($parser1 : expr, $parser2 : expr) => {{
+        move |input| {
+            let result1 = $parser1(input);
+            match result1 {
+                Ok((token1, state1)) => {
+                    let result2 = $parser2(state1);
+                    match result2 {
+                        Ok((token2, state2)) => {
+                            let token = Token::new(
+                                (token1.value, token2.value),
+                                token1.start,
+                                token1.length + token2.length,
+                            );
+                            Ok((token, state2))
+                        }
+                        Err(e) => Err(e),
                     }
-                    Err(e) => Err(e),
                 }
+                Err(e) => Err(e),
             }
-            Err(e) => Err(e),
         }
     }};
 }
 
 #[macro_export]
 macro_rules! por {
-    ($parser1 : expr, $parser2 : expr, $input : expr) => {{
-        let result1 = $parser1($input);
-        match result1 {
-            Err(error1) => {
-                let result2 = $parser2($input);
-                match result2 {
-                    Ok((token2, state2)) => {
-                        let token = Token::new(token2.value, token2.start, token2.length);
-                        Ok((token, state2))
+    ($parser1 : expr, $parser2 : expr) => {{
+        move |input| {
+            let result1 = $parser1(input);
+            match result1 {
+                Err(error1) => {
+                    let result2 = $parser2(input);
+                    match result2 {
+                        Ok((token2, state2)) => {
+                            let token = Token::new(token2.value, token2.start, token2.length);
+                            Ok((token, state2))
+                        }
+                        Err(_error2) => Err(error1), //TODO combine errors
                     }
-                    Err(_error2) => Err(error1), //TODO combine errors
                 }
+                Ok((token1, state1)) => Ok((token1, state1)),
             }
-            Ok((token1, state1)) => Ok((token1, state1)),
         }
     }};
 }
@@ -185,7 +189,8 @@ mod tests {
 
     #[test]
     fn test_pthen_success_1() {
-        let result = pthen!(pchar!('H'), pchar!('e'), "Hello".into());
+        let parser = pthen!(pchar!('H'), pchar!('e'));
+        let result = parser("Hello".into());
         let expected = Ok((
             Token {
                 value: ('H', 'e'),
@@ -202,7 +207,8 @@ mod tests {
 
     #[test]
     fn test_pthen_success_2() {
-        let result = pthen!(pchar!('H'), pchar!('e'), "He".into());
+        let parser = pthen!(pchar!('H'), pchar!('e'));
+        let result = parser("He".into());
         let expected = Ok((
             Token {
                 value: ('H', 'e'),
@@ -219,7 +225,8 @@ mod tests {
 
     #[test]
     fn test_por_success_1() {
-        let result = por!(pchar!('H'), pchar!('h'), "H".into());
+        let parser = por!(pchar!('H'), pchar!('h'));
+        let result = parser("H".into());
         let expected = Ok((
             Token {
                 value: 'H',
@@ -236,7 +243,8 @@ mod tests {
 
     #[test]
     fn test_por_success_2() {
-        let result = por!(pchar!('H'), pchar!('h'), "h".into());
+        let parser = por!(pchar!('H'), pchar!('h'));
+        let result = parser("h".into());
         let expected = Ok((
             Token {
                 value: 'h',
