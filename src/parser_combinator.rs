@@ -115,8 +115,38 @@ pub fn pchar<'a>(c: char, state: ContinuationState<'a>) -> ParseResult<'a, char>
 
 #[macro_export]
 macro_rules! pchar {
-    ($value1:expr) => {{
-        |cont| pchar($value1, cont)
+    ($value:expr) => {{
+        |cont| pchar($value, cont)
+    }};
+}
+
+#[macro_export]
+macro_rules! pstring {
+    ($value:expr) => {{
+        |input| {
+            let mut cont = input;
+            let mut error = None;
+            for t in $value.chars() {
+                let parser = pchar!(t);
+                let result = parser(cont);
+                match result {
+                    Ok((_, new_cont)) => cont = new_cont,
+                    Err(err) => {
+                        //TODO fix length
+                        error = Some(Err(Error::new(
+                            err.expected.to_string(),
+                            err.actual.to_string(),
+                            err.position,
+                        )));
+                        break;
+                    }
+                }
+            }
+            match error {
+                Some(err) => err,
+                None => Ok((Token::new($value, 0, $value.len()), cont)), //TODO fix start and length
+            }
+        }
     }};
 }
 
@@ -358,28 +388,27 @@ mod tests {
         assert_eq!(result, expected);
     }
 
-    /*
     #[test]
 
     fn test_pstring_eof() {
-        let h_parser = pstring("Hello");
-        let result = h_parser.parse("".into());
-        let expected = Err("Expected 'Hello' but got 'EOF' at 0".to_string());
+        let h_parser = pstring!("Hello");
+        let result = h_parser("".into());
+        let expected = Err(Error::new("H".to_string(), "EOF".to_string(), 0));
         assert_eq!(result, expected);
     }
 
     #[test]
     fn test_pstring_wrong_letter() {
-        let h_parser = pstring("Hello");
-        let result = h_parser.parse("c".into());
-        let expected = Err("Expected 'Hello' but got 'c' at 0".to_string());
+        let h_parser = pstring!("Hello");
+        let result = h_parser("c".into());
+        let expected = Err(Error::new("H".to_string(), "c".to_string(), 0));
         assert_eq!(result, expected);
     }
 
     #[test]
     fn test_pstring_success() {
-        let h_parser = pstring("Hello");
-        let result = h_parser.parse("Hello".into());
+        let h_parser = pstring!("Hello");
+        let result = h_parser("Hello".into());
         let expected = Ok((
             Token {
                 value: "Hello",
@@ -388,9 +417,11 @@ mod tests {
             },
             ContinuationState {
                 remaining: "",
-                position: 5,
+                absolute_position: 5,
+                line_number: 0,
+                line_position: 5,
             },
         ));
         assert_eq!(result, expected);
-    }*/
+    }
 }
