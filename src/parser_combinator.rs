@@ -132,11 +132,10 @@ macro_rules! pstring {
                 match result {
                     Ok((_, new_cont)) => cont = new_cont,
                     Err(err) => {
-                        //TODO fix length
                         error = Some(Err(Error::new(
                             err.expected.to_string(),
                             err.actual.to_string(),
-                            err.position,
+                            err.position, //This seems to work, but I dont know why!
                         )));
                         break;
                     }
@@ -144,7 +143,7 @@ macro_rules! pstring {
             }
             match error {
                 Some(err) => err,
-                None => Ok((Token::new($value, 0, $value.len()), cont)), //TODO fix start and length
+                None => Ok((Token::new($value, 0, $value.len()), cont)),  //This seems to work, but I dont know why!
             }
         }
     }};
@@ -406,6 +405,15 @@ mod tests {
     }
 
     #[test]
+    fn test_pstring_wrong_letter_after_other_parse() {
+        let parser1 = pthen!(pchar!('c'), pchar!('w'));
+        let parser = pthen!(parser1, pstring!("Hello"));
+        let result = parser("cwrong".into());
+        let expected = Err(Error::new("H".to_string(), "r".to_string(), 2));
+        assert_eq!(result, expected);
+    }
+
+    #[test]
     fn test_pstring_success() {
         let h_parser = pstring!("Hello");
         let result = h_parser("Hello".into());
@@ -422,6 +430,15 @@ mod tests {
                 line_position: 5,
             },
         ));
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_pchar_followed_by_pstring_followed_by_failure() {
+        let parser1 = pthen!(pchar!('c'), pstring!("Hello"));
+        let parser = pthen!(parser1, pchar!('w'));
+        let result = parser("cHelloX".into());
+        let expected = Err(Error::new("w".to_string(), "X".to_string(), 6));
         assert_eq!(result, expected);
     }
 }
