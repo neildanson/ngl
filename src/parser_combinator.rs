@@ -167,7 +167,6 @@ macro_rules! pmap {
 
 mod tests {
     use super::*;
-
     #[test]
     fn test_pchar_eof() {
         let parser = pchar!('H');
@@ -295,8 +294,8 @@ mod tests {
     #[test]
     fn test_poptional_success() {
         let parser = poptional!(pchar!('T'));
-        let result = parser("T".into());
-        let expected = Ok((
+        let result: ParseResult<Option<char>> = parser("T".into());
+        let expected: ParseResult<Option<char>> = Ok((
             Token {
                 value: Some('T'),
                 start: 0,
@@ -312,9 +311,9 @@ mod tests {
 
     #[test]
     fn test_poptional_success_with_failure() {
-        let parser = poptional!(pchar!('T'));
-        let result = parser("T".into());
-        let expected = Ok((
+        let parser = poptional!(pchar!('h'));
+        let result: ParseResult<Option<char>> = parser("T".into());
+        let expected: ParseResult<Option<char>> = Ok((
             Token {
                 value: None,
                 start: 0,
@@ -322,7 +321,7 @@ mod tests {
             },
             ContinuationState {
                 remaining: "T",
-                position: 1,
+                position: 0,
             },
         ));
         assert_eq!(result, expected);
