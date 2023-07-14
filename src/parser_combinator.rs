@@ -136,6 +136,22 @@ macro_rules! por {
 }
 
 #[macro_export]
+macro_rules! poptional {
+    ($parser1 : expr) => {{
+        move |input| {
+            let result1 = $parser1(input);
+            match result1 {
+                Ok((token, state)) => Ok((
+                    Token::new(Some(token.value), token.start, token.length),
+                    state,
+                )),
+                Err(_error1) => Ok((Token::new(None, 0, 0), input)),
+            }
+        }
+    }};
+}
+
+#[macro_export]
 macro_rules! pmap {
     ($parser1 : expr, $f : expr) => {{
         move |input| {
@@ -270,6 +286,42 @@ mod tests {
             },
             ContinuationState {
                 remaining: "",
+                position: 1,
+            },
+        ));
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_poptional_success() {
+        let parser = poptional!(pchar!('T'));
+        let result = parser("T".into());
+        let expected = Ok((
+            Token {
+                value: Some('T'),
+                start: 0,
+                length: 1,
+            },
+            ContinuationState {
+                remaining: "",
+                position: 1,
+            },
+        ));
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_poptional_success_with_failure() {
+        let parser = poptional!(pchar!('T'));
+        let result = parser("T".into());
+        let expected = Ok((
+            Token {
+                value: None,
+                start: 0,
+                length: 0,
+            },
+            ContinuationState {
+                remaining: "T",
                 position: 1,
             },
         ));
