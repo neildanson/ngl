@@ -26,7 +26,7 @@ pub struct ContinuationState<'a> {
 }
 
 impl<'a> ContinuationState<'a> {
-    fn new(input: &'a str) -> Self {
+    pub fn new(input: &'a str) -> Self {
         Self {
             remaining: input,
             absolute_position: 0,
@@ -57,13 +57,13 @@ impl<'a> From<&'a str> for ContinuationState<'a> {
 
 #[derive(PartialEq)]
 pub struct Error {
-    expected: String,
-    actual: String,
-    position: usize,
+    pub expected: String,
+    pub actual: String,
+    pub position: usize, //TODO add lines and columns
 }
 
 impl Error {
-    fn new(expected: String, actual: String, position: usize) -> Self {
+    pub fn new(expected: String, actual: String, position: usize) -> Self {
         Self {
             expected,
             actual,
