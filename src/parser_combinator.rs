@@ -295,7 +295,7 @@ mod tests {
     fn test_poptional_success() {
         let parser = poptional!(pchar!('T'));
         let result: ParseResult<Option<char>> = parser("T".into());
-        let expected: ParseResult<Option<char>> = Ok((
+        let expected = Ok((
             Token {
                 value: Some('T'),
                 start: 0,
@@ -312,7 +312,7 @@ mod tests {
     #[test]
     fn test_poptional_success_with_failure() {
         let parser = poptional!(pchar!('h'));
-        let result: ParseResult<Option<char>> = parser("T".into());
+        let result = parser("T".into());
         let expected: ParseResult<Option<char>> = Ok((
             Token {
                 value: None,
