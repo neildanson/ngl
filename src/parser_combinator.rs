@@ -20,21 +20,31 @@ impl<T> Token<T> {
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub struct ContinuationState<'a> {
     remaining: &'a str,
-    position: usize, //TODO add line numbers
+    absolute_position: usize,
+    line_number: usize,
+    line_position: usize,
 }
 
 impl<'a> ContinuationState<'a> {
     fn new(input: &'a str) -> Self {
         Self {
             remaining: input,
-            position: 0,
+            absolute_position: 0,
+            line_number: 0,
+            line_position: 0,
         }
     }
 
-    fn advance(&self, n: usize) -> Self {
+    fn advance(&self, abs: usize, line: usize) -> Self {
         Self {
-            remaining: &self.remaining[n..],
-            position: self.position + n,
+            remaining: &self.remaining[abs..],
+            absolute_position: self.absolute_position + abs,
+            line_number: self.line_number + line,
+            line_position: if line == 0 {
+                self.line_position + abs
+            } else {
+                0
+            },
         }
     }
 }
@@ -86,15 +96,20 @@ pub fn pchar<'a>(c: char, state: ContinuationState<'a>) -> ParseResult<'a, char>
     let mut chars = state.remaining.chars();
     match chars.next() {
         Some(letter) if letter == c => {
-            let parser_state = state.advance(1);
-            Ok((Token::new(c, state.position, 1), parser_state))
+            let new_line = if letter == '\n' { 1 } else { 0 };
+            let parser_state = state.advance(1, new_line);
+            Ok((Token::new(c, state.absolute_position, 1), parser_state))
         }
         Some(letter) => Err(Error::new(
             c.to_string(),
             letter.to_string(),
-            state.position,
+            state.absolute_position,
         )),
-        None => Err(Error::new(c.to_string(), "EOF".to_string(), state.position)),
+        None => Err(Error::new(
+            c.to_string(),
+            "EOF".to_string(),
+            state.absolute_position,
+        )),
     }
 }
 
@@ -195,7 +210,9 @@ mod tests {
             },
             ContinuationState {
                 remaining: "",
-                position: 1,
+                absolute_position: 1,
+                line_number: 0,
+                line_position: 1,
             },
         ));
         assert_eq!(result, expected);
@@ -213,7 +230,9 @@ mod tests {
             },
             ContinuationState {
                 remaining: "llo",
-                position: 2,
+                absolute_position: 2,
+                line_number: 0,
+                line_position: 2,
             },
         ));
         assert_eq!(result, expected);
@@ -231,7 +250,9 @@ mod tests {
             },
             ContinuationState {
                 remaining: "",
-                position: 2,
+                absolute_position: 2,
+                line_number: 0,
+                line_position: 2,
             },
         ));
         assert_eq!(result, expected);
@@ -249,7 +270,9 @@ mod tests {
             },
             ContinuationState {
                 remaining: "",
-                position: 1,
+                absolute_position: 1,
+                line_number: 0,
+                line_position: 1,
             },
         ));
         assert_eq!(result, expected);
@@ -267,7 +290,9 @@ mod tests {
             },
             ContinuationState {
                 remaining: "",
-                position: 1,
+                absolute_position: 1,
+                line_number: 0,
+                line_position: 1,
             },
         ));
         assert_eq!(result, expected);
@@ -285,7 +310,9 @@ mod tests {
             },
             ContinuationState {
                 remaining: "",
-                position: 1,
+                absolute_position: 1,
+                line_number: 0,
+                line_position: 1,
             },
         ));
         assert_eq!(result, expected);
@@ -303,7 +330,9 @@ mod tests {
             },
             ContinuationState {
                 remaining: "",
-                position: 1,
+                absolute_position: 1,
+                line_number: 0,
+                line_position: 1,
             },
         ));
         assert_eq!(result, expected);
@@ -321,7 +350,9 @@ mod tests {
             },
             ContinuationState {
                 remaining: "T",
-                position: 0,
+                absolute_position: 0,
+                line_number: 0,
+                line_position: 0,
             },
         ));
         assert_eq!(result, expected);
