@@ -60,12 +60,18 @@ pub struct Error {
     pub expected: String,
     pub actual: String,
     pub position: usize,
-    line_number: usize,
-    line_position: usize,
+    pub line_number: usize,
+    pub line_position: usize,
 }
 
 impl Error {
-    pub fn new(expected: String, actual: String, position: usize) -> Self {
+    pub fn new(
+        expected: String,
+        actual: String,
+        position: usize,
+        line_number: usize,
+        line_position: usize,
+    ) -> Self {
         Self {
             expected,
             actual,
@@ -76,8 +82,8 @@ impl Error {
     }
     fn format_error(&self) -> String {
         format!(
-            "Expected '{}' but got '{}' at {}",
-            self.expected, self.actual, self.position
+            "Expected '{}' but got '{}' at line: {}, column: {}",
+            self.expected, self.actual, self.line_number, self.line_position
         )
     }
 }
@@ -108,8 +114,16 @@ pub fn pchar<'a>(c: char, state: ContinuationState<'a>) -> ParseResult<'a, char>
             c.to_string(),
             letter.to_string(),
             state.position,
+            state.line_number,
+            state.line_position,
         )),
-        None => Err(Error::new(c.to_string(), "".to_string(), state.position)),
+        None => Err(Error::new(
+            c.to_string(),
+            "".to_string(),
+            state.position,
+            state.line_number,
+            state.line_position,
+        )),
     }
 }
 
@@ -139,7 +153,9 @@ macro_rules! pstring {
                         error = Some(Err(Error::new(
                             $value.to_string(),
                             actual.to_string(),
-                            err.position, //This seems to work, but I dont know why!
+                            err.position,
+                            err.line_number,
+                            err.line_position,
                         )));
                         break;
                     }
@@ -219,7 +235,7 @@ mod tests {
     fn test_pchar_eof() {
         let parser = pchar!('H');
         let result = parser("".into());
-        let expected = Err(Error::new("H".to_string(), "".to_string(), 0));
+        let expected = Err(Error::new("H".to_string(), "".to_string(), 0, 0, 0));
         assert_eq!(result, expected);
     }
 
@@ -227,7 +243,7 @@ mod tests {
     fn test_pchar_wrong_letter() {
         let parser = pchar!('H');
         let result = parser("c".into());
-        let expected = Err(Error::new("H".to_string(), "c".to_string(), 0));
+        let expected = Err(Error::new("H".to_string(), "c".to_string(), 0, 0, 0));
         assert_eq!(result, expected);
     }
 
@@ -396,7 +412,7 @@ mod tests {
     fn test_pstring_eof() {
         let h_parser = pstring!("Hello");
         let result = h_parser("Hell".into());
-        let expected = Err(Error::new("Hello".to_string(), "Hell".to_string(), 4));
+        let expected = Err(Error::new("Hello".to_string(), "Hell".to_string(), 4, 0, 4));
         assert_eq!(result, expected);
     }
 
@@ -404,7 +420,7 @@ mod tests {
     fn test_pstring_wrong_letter() {
         let h_parser = pstring!("Hello");
         let result = h_parser("c".into());
-        let expected = Err(Error::new("Hello".to_string(), "c".to_string(), 0));
+        let expected = Err(Error::new("Hello".to_string(), "c".to_string(), 0, 0, 0));
         assert_eq!(result, expected);
     }
 
@@ -413,7 +429,7 @@ mod tests {
         let parser1 = pthen!(pchar!('c'), pchar!('w'));
         let parser = pthen!(parser1, pstring!("Hello"));
         let result = parser("cwrong".into());
-        let expected = Err(Error::new("Hello".to_string(), "r".to_string(), 2));
+        let expected = Err(Error::new("Hello".to_string(), "r".to_string(), 2, 0, 2));
         assert_eq!(result, expected);
     }
 
@@ -442,7 +458,16 @@ mod tests {
         let parser1 = pthen!(pchar!('c'), pstring!("Hello"));
         let parser = pthen!(parser1, pchar!('w'));
         let result = parser("cHelloX".into());
-        let expected = Err(Error::new("w".to_string(), "X".to_string(), 6));
+        let expected = Err(Error::new("w".to_string(), "X".to_string(), 6, 0, 6));
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_correct_line_number_on_error() {
+        let parser = pthen!(pchar!('\n'), pchar!('\n'));
+        let parser = pthen!(parser, pchar!('a'));
+        let result = parser("\n\nb".into());
+        let expected = Err(Error::new("a".to_string(), "b".to_string(), 2, 2, 0));
         assert_eq!(result, expected);
     }
 }
