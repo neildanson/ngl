@@ -19,8 +19,8 @@ impl<T> Token<T> {
 
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub struct ContinuationState<'a> {
-    remaining: &'a str,
-    absolute_position: usize,
+    pub remaining: &'a str,
+    pub absolute_position: usize,
     line_number: usize,
     line_position: usize,
 }
@@ -107,7 +107,7 @@ pub fn pchar<'a>(c: char, state: ContinuationState<'a>) -> ParseResult<'a, char>
         )),
         None => Err(Error::new(
             c.to_string(),
-            "EOF".to_string(),
+            "".to_string(),
             state.absolute_position,
         )),
     }
@@ -132,9 +132,14 @@ macro_rules! pstring {
                 match result {
                     Ok((_, new_cont)) => cont = new_cont,
                     Err(err) => {
+                        let actual_length = err.position - input.absolute_position;
+                        let actual =
+                            if actual_length + 1 <= input.remaining.len()
+                            { input.remaining[0..actual_length + 1].to_string() }
+                            else { input.remaining[0..actual_length].to_string().to_string() };
                         error = Some(Err(Error::new(
-                            err.expected.to_string(),
-                            err.actual.to_string(),
+                            $value.to_string(),
+                            actual.to_string(),
                             err.position, //This seems to work, but I dont know why!
                         )));
                         break;
@@ -215,7 +220,7 @@ mod tests {
     fn test_pchar_eof() {
         let parser = pchar!('H');
         let result = parser("".into());
-        let expected = Err(Error::new("H".to_string(), "EOF".to_string(), 0));
+        let expected = Err(Error::new("H".to_string(), "".to_string(), 0));
         assert_eq!(result, expected);
     }
 
@@ -391,8 +396,8 @@ mod tests {
 
     fn test_pstring_eof() {
         let h_parser = pstring!("Hello");
-        let result = h_parser("".into());
-        let expected = Err(Error::new("H".to_string(), "EOF".to_string(), 0));
+        let result = h_parser("Hell".into());
+        let expected = Err(Error::new("Hello".to_string(), "Hell".to_string(), 4));
         assert_eq!(result, expected);
     }
 
@@ -400,7 +405,7 @@ mod tests {
     fn test_pstring_wrong_letter() {
         let h_parser = pstring!("Hello");
         let result = h_parser("c".into());
-        let expected = Err(Error::new("H".to_string(), "c".to_string(), 0));
+        let expected = Err(Error::new("Hello".to_string(), "c".to_string(), 0));
         assert_eq!(result, expected);
     }
 
@@ -409,7 +414,7 @@ mod tests {
         let parser1 = pthen!(pchar!('c'), pchar!('w'));
         let parser = pthen!(parser1, pstring!("Hello"));
         let result = parser("cwrong".into());
-        let expected = Err(Error::new("H".to_string(), "r".to_string(), 2));
+        let expected = Err(Error::new("Hello".to_string(), "r".to_string(), 2));
         assert_eq!(result, expected);
     }
 
