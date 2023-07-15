@@ -76,8 +76,8 @@ impl Error {
             expected,
             actual,
             position,
-            line_number: 0, //TODO
-            line_position: 0,
+            line_number,
+            line_position,
         }
     }
     fn format_error(&self) -> String {
