@@ -20,7 +20,7 @@ impl<T> Token<T> {
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub struct ContinuationState<'a> {
     remaining: &'a str,
-    absolute_position: usize,
+    position: usize,
     line_number: usize,
     line_position: usize,
 }
@@ -29,7 +29,7 @@ impl<'a> ContinuationState<'a> {
     pub fn new(input: &'a str) -> Self {
         Self {
             remaining: input,
-            absolute_position: 0,
+            position: 0,
             line_number: 0,
             line_position: 0,
         }
@@ -38,7 +38,7 @@ impl<'a> ContinuationState<'a> {
     fn advance(&self, abs: usize, line: usize) -> Self {
         Self {
             remaining: &self.remaining[abs..],
-            absolute_position: self.absolute_position + abs,
+            position: self.position + abs,
             line_number: self.line_number + line,
             line_position: if line == 0 {
                 self.line_position + abs
@@ -59,7 +59,9 @@ impl<'a> From<&'a str> for ContinuationState<'a> {
 pub struct Error {
     pub expected: String,
     pub actual: String,
-    pub position: usize, //TODO add lines and columns
+    pub position: usize,
+    line_number: usize,
+    line_position: usize,
 }
 
 impl Error {
@@ -68,6 +70,8 @@ impl Error {
             expected,
             actual,
             position,
+            line_number: 0, //TODO
+            line_position: 0,
         }
     }
     fn format_error(&self) -> String {
@@ -98,18 +102,14 @@ pub fn pchar<'a>(c: char, state: ContinuationState<'a>) -> ParseResult<'a, char>
         Some(letter) if letter == c => {
             let new_line = if letter == '\n' { 1 } else { 0 };
             let parser_state = state.advance(1, new_line);
-            Ok((Token::new(c, state.absolute_position, 1), parser_state))
+            Ok((Token::new(c, state.position, 1), parser_state))
         }
         Some(letter) => Err(Error::new(
             c.to_string(),
             letter.to_string(),
-            state.absolute_position,
+            state.position,
         )),
-        None => Err(Error::new(
-            c.to_string(),
-            "".to_string(),
-            state.absolute_position,
-        )),
+        None => Err(Error::new(c.to_string(), "".to_string(), state.position)),
     }
 }
 
@@ -243,7 +243,7 @@ mod tests {
             },
             ContinuationState {
                 remaining: "",
-                absolute_position: 1,
+                position: 1,
                 line_number: 0,
                 line_position: 1,
             },
@@ -263,7 +263,7 @@ mod tests {
             },
             ContinuationState {
                 remaining: "llo",
-                absolute_position: 2,
+                position: 2,
                 line_number: 0,
                 line_position: 2,
             },
@@ -283,7 +283,7 @@ mod tests {
             },
             ContinuationState {
                 remaining: "",
-                absolute_position: 2,
+                position: 2,
                 line_number: 0,
                 line_position: 2,
             },
@@ -303,7 +303,7 @@ mod tests {
             },
             ContinuationState {
                 remaining: "",
-                absolute_position: 1,
+                position: 1,
                 line_number: 0,
                 line_position: 1,
             },
@@ -323,7 +323,7 @@ mod tests {
             },
             ContinuationState {
                 remaining: "",
-                absolute_position: 1,
+                position: 1,
                 line_number: 0,
                 line_position: 1,
             },
@@ -343,7 +343,7 @@ mod tests {
             },
             ContinuationState {
                 remaining: "",
-                absolute_position: 1,
+                position: 1,
                 line_number: 0,
                 line_position: 1,
             },
@@ -363,7 +363,7 @@ mod tests {
             },
             ContinuationState {
                 remaining: "",
-                absolute_position: 1,
+                position: 1,
                 line_number: 0,
                 line_position: 1,
             },
@@ -383,7 +383,7 @@ mod tests {
             },
             ContinuationState {
                 remaining: "T",
-                absolute_position: 0,
+                position: 0,
                 line_number: 0,
                 line_position: 0,
             },
@@ -429,7 +429,7 @@ mod tests {
             },
             ContinuationState {
                 remaining: "",
-                absolute_position: 5,
+                position: 5,
                 line_number: 0,
                 line_position: 5,
             },
