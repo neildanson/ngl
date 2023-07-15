@@ -19,8 +19,8 @@ impl<T> Token<T> {
 
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub struct ContinuationState<'a> {
-    pub remaining: &'a str,
-    pub absolute_position: usize,
+    remaining: &'a str,
+    absolute_position: usize,
     line_number: usize,
     line_position: usize,
 }
@@ -126,17 +126,16 @@ macro_rules! pstring {
         |input| {
             let mut cont = input;
             let mut error = None;
+            let mut success = Vec::new();
             for t in $value.chars() {
                 let parser = pchar!(t);
                 let result = parser(cont);
                 match result {
-                    Ok((_, new_cont)) => cont = new_cont,
+                    Ok((_, new_cont)) => {
+                        success.push(t);
+                        cont = new_cont },
                     Err(err) => {
-                        let actual_length = err.position - input.absolute_position;
-                        let actual =
-                            if actual_length + 1 <= input.remaining.len()
-                            { input.remaining[0..actual_length + 1].to_string() }
-                            else { input.remaining[0..actual_length].to_string().to_string() };
+                        let actual = success.iter().collect::<String>() + &err.actual;
                         error = Some(Err(Error::new(
                             $value.to_string(),
                             actual.to_string(),
