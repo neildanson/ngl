@@ -207,7 +207,7 @@ pub fn poptional<'a, T>(
     }
 }
 
-fn pmap<'a, T, U>(
+pub fn pmap<'a, T, U>(
     parser: impl Fn(ContinuationState<'a>) -> ParseResult<T>,
     f: impl Fn(T) -> U,
 ) -> impl Fn(ContinuationState<'a>) -> ParseResult<U> {
