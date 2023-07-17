@@ -221,6 +221,18 @@ macro_rules! pmap {
     }};
 }
 
+#[macro_export]
+macro_rules! pchoice {
+    ($head:expr) => ({
+        move |input| $head(input) //TODO - we should accumulate the errors for choice (ie "a" or "b" )
+    });
+    ($head:expr, $($tail:expr),*) => ({
+        move |input| {
+            let result1 = $head(input);
+            result1.or_else(|_error1| pchoice!($($tail),*)(input))
+        }});
+}
+
 mod tests {
     use super::*;
     #[test]
@@ -460,6 +472,34 @@ mod tests {
         let parser = pthen(parser, pchar('a'));
         let result = parser("\n\nb".into());
         let expected = Err(Error::new("a".to_string(), "b".to_string(), 2, 2, 0));
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_pchoice_success() {
+        let parser = pchoice!(pchar('a'), pchar('b'));
+        let result = parser("b".into());
+        let expected = Ok((
+            Token {
+                value: 'b',
+                start: 0,
+                length: 1,
+            },
+            ContinuationState {
+                remaining: "",
+                position: 1,
+                line_number: 0,
+                line_position: 1,
+            },
+        ));
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_pchoice_fail() {
+        let parser = pchoice!(pchar('a'), pchar('b'));
+        let result = parser("c".into());
+        let expected = Err(Error::new("b".to_string(), "c".to_string(), 0, 0, 0));
         assert_eq!(result, expected);
     }
 }

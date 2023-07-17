@@ -8,6 +8,9 @@ fn main() {
         pthen(por(pchar('H'), pchar('h')), pstring("ello")),
     );
 
+    let choice = pchoice!(pchar('a'), pchar('b'), pchar('c'));
+    println!("{:?}", choice("d".into()));
+
     let result = parser("\nhel1o".into());
 
     println!("{:?}", result);
