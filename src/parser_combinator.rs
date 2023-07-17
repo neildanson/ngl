@@ -207,18 +207,18 @@ pub fn poptional<'a, T>(
     }
 }
 
-#[macro_export]
-macro_rules! pmap {
-    ($parser1 : expr, $f : expr) => {{
-        move |input| {
-            let result1 = $parser1(input);
-            result1.map(|(token, state)| {
-                let result = $f(token.value);
-                let token = Token::new(result, token.start, token.length);
-                (token, state)
-            })
-        }
-    }};
+fn pmap<'a, T, U>(
+    parser: impl Fn(ContinuationState<'a>) -> ParseResult<T>,
+    f: impl Fn(T) -> U,
+) -> impl Fn(ContinuationState<'a>) -> ParseResult<U> {
+    move |input| {
+        let result = parser(input);
+        result.map(|(token, state)| {
+            let result = f(token.value);
+            let token = Token::new(result, token.start, token.length);
+            (token, state)
+        })
+    }
 }
 
 #[macro_export]
@@ -353,7 +353,7 @@ mod tests {
 
     #[test]
     fn test_pmap_success() {
-        let parser = pmap!(pchar('T'), |_| true);
+        let parser = pmap(pchar('T'), |_| true);
         let result = parser("T".into());
         let expected = Ok((
             Token {
