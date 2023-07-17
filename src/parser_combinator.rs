@@ -234,8 +234,6 @@ macro_rules! pchoice {
 }
 
 mod tests {
-    use std::result;
-
     use super::*;
     #[test]
     fn test_pchar_eof() {
