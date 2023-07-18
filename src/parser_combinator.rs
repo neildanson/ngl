@@ -250,9 +250,16 @@ macro_rules! pany {
 }
 
 pub fn pmany<'a, T>(
-    _parser: impl Fn(ContinuationState<'a>) -> ParseResult<T>,
+    parser: impl Fn(ContinuationState<'a>) -> ParseResult<T>,
 ) -> impl Fn(ContinuationState<'a>) -> ParseResult<'a, Vec<T>> {
-    move |_input| todo!("pmany")
+    move |input| {
+        let mut results = Vec::new();
+        let result = parser(input)?;
+        results.push(result.0.value);
+
+        let len = result.0.length;
+        Ok((Token::new(results, 0, len), input))
+    }
 }
 
 mod tests {
@@ -554,7 +561,15 @@ mod tests {
     }
 
     #[test]
-    fn test_pmany() {
+    fn test_pmany_0() {
+        let parser = pmany(pchar('a'));
+        let result = parser("b".into());
+        let expected = Err(Error::new("a".to_string(), "b".to_string(), 0, 0, 0));
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_pmany_1() {
         let parser = pmany(pchar('a'));
         let result = parser("aaaa".into());
         let expected = Ok((
