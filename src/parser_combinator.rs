@@ -254,11 +254,33 @@ pub fn pmany<'a, T>(
 ) -> impl Fn(ContinuationState<'a>) -> ParseResult<'a, Vec<T>> {
     move |input| {
         let mut results = Vec::new();
-        let result = parser(input)?;
-        results.push(result.0.value);
+        let mut input = input;
+        let mut error = None;
+        loop {
+            let result = parser(input);
+            match result {
+                Ok((token, state)) => {
+                    results.push(token.value);
+                    input = state;
+                }
+                Err(err) => {
+                    error = Some(err);
+                    break;
+                }
+            }
+        }
 
-        let len = result.0.length;
-        Ok((Token::new(results, 0, len), input))
+        let len = results.len();
+        match error {
+            Some(err) => {
+                if len == 0 {
+                    Err(err)
+                } else {
+                    Ok((Token::new(results, 0, len), input))
+                }
+            }
+            None => Ok((Token::new(results, 0, len), input)),
+        }
     }
 }
 
