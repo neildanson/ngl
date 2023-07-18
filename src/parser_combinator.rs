@@ -249,6 +249,12 @@ macro_rules! pany {
         }});
 }
 
+pub fn pmany<'a, T>(parser:impl Fn(T) -> ParseResult<T> ) -> impl Fn(ContinuationState<'a>) -> ParseResult<'a, T> {
+    move |input| {
+        todo!("pmany")
+    }
+}
+
 mod tests {
     use super::*;
     #[test]
