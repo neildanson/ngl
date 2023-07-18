@@ -9,6 +9,8 @@ fn main() {
     );
 
     let choice = pchoice!(pchar('a'), pchar('b'), pchar('c'));
+    let any = pany!('a', 'b', 'c');
+
     println!("{:?}", choice("d".into()));
 
     let result = parser("\nhel1o".into());
