@@ -249,6 +249,41 @@ macro_rules! pany {
         }});
 }
 
+pub fn pmany<'a, T>(
+    parser: impl Fn(ContinuationState<'a>) -> ParseResult<T>,
+) -> impl Fn(ContinuationState<'a>) -> ParseResult<'a, Vec<T>> {
+    move |input| {
+        let mut results = Vec::new();
+        let mut input = input;
+        let mut error = None;
+        loop {
+            let result = parser(input);
+            match result {
+                Ok((token, state)) => {
+                    results.push(token.value);
+                    input = state;
+                }
+                Err(err) => {
+                    error = Some(err);
+                    break;
+                }
+            }
+        }
+
+        let len = results.len();
+        match error {
+            Some(err) => {
+                if len == 0 {
+                    Err(err)
+                } else {
+                    Ok((Token::new(results, 0, len), input))
+                }
+            }
+            None => Ok((Token::new(results, 0, len), input)),
+        }
+    }
+}
+
 mod tests {
     use super::*;
     #[test]
@@ -544,6 +579,54 @@ mod tests {
         let parser = pany!('a', 'b', 'c');
         let result = parser("d".into());
         let expected = Err(Error::new("c".to_string(), "d".to_string(), 0, 0, 0));
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_pmany_0() {
+        let parser = pmany(pchar('a'));
+        let result = parser("b".into());
+        let expected = Err(Error::new("a".to_string(), "b".to_string(), 0, 0, 0));
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_pmany_1() {
+        let parser = pmany(pchar('a'));
+        let result = parser("aaaa".into());
+        let expected = Ok((
+            Token {
+                value: vec!['a', 'a', 'a', 'a'],
+                start: 0,
+                length: 4,
+            },
+            ContinuationState {
+                remaining: "",
+                position: 4,
+                line_number: 0,
+                line_position: 4,
+            },
+        ));
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_pmany_2() {
+        let parser = pmany(pchar('a'));
+        let result = parser("aaab".into());
+        let expected = Ok((
+            Token {
+                value: vec!['a', 'a', 'a'],
+                start: 0,
+                length: 3,
+            },
+            ContinuationState {
+                remaining: "b",
+                position: 3,
+                line_number: 0,
+                line_position: 3,
+            },
+        ));
         assert_eq!(result, expected);
     }
 }

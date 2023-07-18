@@ -3,17 +3,23 @@ mod parser_combinator;
 use parser_combinator::*;
 
 fn main() {
-    let parser = pthen(
-        poptional(pchar('\n')),
-        pthen(por(pchar('H'), pchar('h')), pstring("ello")),
+    let any_number = pany!('0', '1', '2', '3', '4', '5', '6', '7', '8', '9');
+    let many_numbers = pmany(any_number);
+    let number_parser = pthen(poptional(pchar('-')), many_numbers);
+
+    let to_number = pmap(
+        number_parser,
+        move |(negate, value): (Option<char>, Vec<char>)| {
+            let string: String = value.into_iter().collect();
+            let number = string.parse::<i32>().unwrap();
+            match negate {
+                Some(_) => -number,
+                None => number,
+            }
+        },
     );
 
-    let choice = pchoice!(pchar('a'), pchar('b'), pchar('c'));
-    let any = pany!('a', 'b', 'c');
-
-    println!("{:?}", choice("d".into()));
-
-    let result = parser("\nhel1o".into());
+    let result = to_number("123".into());
 
     println!("{:?}", result);
 }
