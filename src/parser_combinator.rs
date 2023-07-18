@@ -233,6 +233,22 @@ macro_rules! pchoice {
         }});
 }
 
+#[macro_export]
+macro_rules! pany {
+    ($head:expr) => ({
+        move |input| {
+            let parser = pchar($head);
+            parser(input)
+         } //TODO - we should accumulate the errors for choice (ie "a" or "b" )
+    });
+    ($head:expr, $($tail:expr),*) => ({
+        move |input| {
+            let parser = pchar($head);
+            let result1 = parser(input);
+            result1.or_else(|_error1| pany!($($tail),*)(input))
+        }});
+}
+
 mod tests {
     use super::*;
     #[test]
@@ -500,6 +516,34 @@ mod tests {
         let parser = pchoice!(pchar('a'), pchar('b'));
         let result = parser("c".into());
         let expected = Err(Error::new("b".to_string(), "c".to_string(), 0, 0, 0));
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_pany_success() {
+        let parser = pany!('a', 'b', 'c');
+        let result = parser("b".into());
+        let expected = Ok((
+            Token {
+                value: 'b',
+                start: 0,
+                length: 1,
+            },
+            ContinuationState {
+                remaining: "",
+                position: 1,
+                line_number: 0,
+                line_position: 1,
+            },
+        ));
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_pany_fail() {
+        let parser = pany!('a', 'b', 'c');
+        let result = parser("d".into());
+        let expected = Err(Error::new("c".to_string(), "d".to_string(), 0, 0, 0));
         assert_eq!(result, expected);
     }
 }
