@@ -2,6 +2,12 @@ mod parser_combinator;
 
 use parser_combinator::*;
 
+#[derive(Debug)]
+enum Value {
+    Number(i32),
+    Bool(bool),
+}
+
 fn main() {
     let any_number = pany!('0', '1', '2', '3', '4', '5', '6', '7', '8', '9');
     let pidentifier = pany!(
@@ -20,15 +26,23 @@ fn main() {
             None => number,
         }
     });
+    let pnumber = pmap(pnumber, |n| Value::Number(n));
+
+    let ptrue = pmap(pstring("true"), |_| true);
+    let pfalse = pmap(pstring("false"), |_| false);
+    let pbool = pmap(por(ptrue, pfalse), |b| Value::Bool(b));
+
+    let pvalue = por(pnumber, pbool);
 
     let let_binding = pleft(pthen(pstring("let"), pws()));
     let let_binding = pright(pthen(let_binding, pidentifier));
     let let_binding = pleft(pthen(let_binding, pws()));
     let let_binding = pleft(pthen(let_binding, pchar('=')));
     let let_binding = pleft(pthen(let_binding, pws()));
-    let let_binding = pthen(let_binding, pnumber);
+    let let_binding = pthen(let_binding, pvalue);
     let let_binding = pleft(pthen(let_binding, pws()));
     let let_binding = pleft(pthen(let_binding, pchar(';')));
-    let result = let_binding("let x = 10;".into());
+
+    let result = let_binding("let x = true;".into());
     println!("{:?}", result);
 }
