@@ -1,7 +1,4 @@
-use std::{
-    fmt::{self, Debug, Display, Formatter},
-    ops::Deref,
-};
+use std::fmt::{self, Debug, Display, Formatter};
 
 #[derive(Debug, PartialEq)]
 pub struct Token<T> {
@@ -17,14 +14,6 @@ impl<T> Token<T> {
             start,
             length,
         }
-    }
-}
-
-impl<T> Deref for Token<T> {
-    type Target = T;
-
-    fn deref(&self) -> &Self::Target {
-        &self.value
     }
 }
 
@@ -168,7 +157,7 @@ pub fn pstring<'a>(value: &'a str) -> impl Fn(ContinuationState<'a>) -> ParseRes
         }
         match error {
             Some(err) => err,
-            None => Ok((Token::new(value, 0, value.len()), cont)), //This seems to work, but I dont know why!
+            None => Ok((Token::new(value, input.position, value.len()), cont)), //This seems to work, but I dont know why!
         }
     }
 }
@@ -176,17 +165,15 @@ pub fn pstring<'a>(value: &'a str) -> impl Fn(ContinuationState<'a>) -> ParseRes
 pub fn pthen<'a, T, U>(
     parser1: impl Fn(ContinuationState<'a>) -> ParseResult<T>,
     parser2: impl Fn(ContinuationState<'a>) -> ParseResult<U>,
-) -> impl Fn(ContinuationState<'a>) -> ParseResult<(T, U)> {
+) -> impl Fn(ContinuationState<'a>) -> ParseResult<(Token<T>, Token<U>)> {
     move |input| {
         let result1 = parser1(input);
         result1.and_then(|(token1, state1)| {
             let result2 = parser2(state1);
             result2.map(|(token2, state2)| {
-                let token = Token::new(
-                    (token1.value, token2.value),
-                    token1.start,
-                    token1.length + token2.length,
-                );
+                let start = token1.start;
+                let length = token1.length + token2.length;
+                let token = Token::new((token1, token2), start, length);
                 (token, state2)
             })
         })
@@ -213,7 +200,7 @@ pub fn poptional<'a, T>(
                 Token::new(Some(token.value), token.start, token.length),
                 state,
             )),
-            Err(_error1) => Ok((Token::new(None, 0, 0), input)),
+            Err(_error1) => Ok((Token::new(None, input.position, 0), input)),
         }
     }
 }
@@ -295,6 +282,30 @@ pub fn pmany<'a, T>(
     }
 }
 
+pub fn pleft<'a, T, U>(
+    parser: impl Fn(ContinuationState<'a>) -> ParseResult<(Token<T>, Token<U>)>,
+) -> impl Fn(ContinuationState<'a>) -> ParseResult<T> {
+    move |input| {
+        let result = parser(input);
+        result.map(|(token, cont)| {
+            let token = token.value.0;
+            (token, cont)
+        })
+    }
+}
+
+pub fn pright<'a, T, U>(
+    parser: impl Fn(ContinuationState<'a>) -> ParseResult<(Token<T>, Token<U>)>,
+) -> impl Fn(ContinuationState<'a>) -> ParseResult<U> {
+    move |input| {
+        let result = parser(input);
+        result.map(|(token, cont)| {
+            let token = token.value.1;
+            (token, cont)
+        })
+    }
+}
+
 mod tests {
     use super::*;
     #[test]
@@ -339,7 +350,7 @@ mod tests {
         let result = parser("Hello".into());
         let expected = Ok((
             Token {
-                value: ('H', 'e'),
+                value: (Token::new('H', 0, 1), Token::new('e', 1, 1)),
                 start: 0,
                 length: 2,
             },
@@ -359,7 +370,7 @@ mod tests {
         let result = parser("He".into());
         let expected = Ok((
             Token {
-                value: ('H', 'e'),
+                value: (Token::new('H', 0, 1), Token::new('e', 1, 1)),
                 start: 0,
                 length: 2,
             },
