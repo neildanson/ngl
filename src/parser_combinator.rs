@@ -306,6 +306,14 @@ pub fn pright<'a, T, U>(
     }
 }
 
+pub fn pbetween<'a, T, U, V>(
+    parser1: impl Fn(ContinuationState<'a>) -> ParseResult<(Token<T>,Token<U>)>,
+    parser2: impl Fn(ContinuationState<'a>) -> ParseResult<(Token<U>,Token<V>)>,
+) -> impl Fn(ContinuationState<'a>) -> ParseResult<U> {
+    let parser = pthen(parser1, parser2);
+    let parser = pleft(parser);
+}
+
 mod tests {
     use super::*;
     #[test]
