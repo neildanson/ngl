@@ -1,4 +1,7 @@
-use std::fmt::{self, Debug, Display, Formatter};
+use std::{
+    fmt::{self, Debug, Display, Formatter},
+    ops::Deref,
+};
 
 #[derive(Debug, PartialEq)]
 pub struct Token<T> {
@@ -14,6 +17,14 @@ impl<T> Token<T> {
             start,
             length,
         }
+    }
+}
+
+impl<T> Deref for Token<T> {
+    type Target = T;
+
+    fn deref(&self) -> &Self::Target {
+        &self.value
     }
 }
 
@@ -251,7 +262,7 @@ macro_rules! pany {
 
 pub fn pmany<'a, T>(
     parser: impl Fn(ContinuationState<'a>) -> ParseResult<T>,
-) -> impl Fn(ContinuationState<'a>) -> ParseResult<'a, Vec<T>> {
+) -> impl Fn(ContinuationState<'a>) -> ParseResult<'a, Vec<Token<T>>> {
     move |input| {
         let mut results = Vec::new();
         let mut input = input;
@@ -260,7 +271,7 @@ pub fn pmany<'a, T>(
             let result = parser(input);
             match result {
                 Ok((token, state)) => {
-                    results.push(token.value);
+                    results.push(token);
                     input = state;
                 }
                 Err(err) => {
@@ -596,7 +607,12 @@ mod tests {
         let result = parser("aaaa".into());
         let expected = Ok((
             Token {
-                value: vec!['a', 'a', 'a', 'a'],
+                value: vec![
+                    Token::new('a', 0, 1),
+                    Token::new('a', 1, 2),
+                    Token::new('a', 2, 3),
+                    Token::new('a', 3, 4),
+                ],
                 start: 0,
                 length: 4,
             },
@@ -616,7 +632,11 @@ mod tests {
         let result = parser("aaab".into());
         let expected = Ok((
             Token {
-                value: vec!['a', 'a', 'a'],
+                value: vec![
+                    Token::new('a', 0, 1),
+                    Token::new('a', 1, 2),
+                    Token::new('a', 2, 3),
+                ],
                 start: 0,
                 length: 3,
             },

@@ -9,8 +9,8 @@ fn main() {
 
     let to_number = pmap(
         number_parser,
-        move |(negate, value): (Option<char>, Vec<char>)| {
-            let string: String = value.into_iter().collect();
+        move |(negate, value): (Option<char>, Vec<Token<char>>)| {
+            let string: String = value.into_iter().map(|c| c.value).collect();
             let number = string.parse::<i32>().unwrap();
             match negate {
                 Some(_) => -number,
