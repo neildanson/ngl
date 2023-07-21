@@ -45,6 +45,6 @@ fn main() {
     let let_binding = pleft(pthen(let_binding, pws()));
     let let_binding = pleft(pthen(let_binding, pchar(';')));
 
-    let result = let_binding("let x = (true);".into());
+    let result = let_binding("let x = (furn);".into());
     println!("{:?}", result);
 }

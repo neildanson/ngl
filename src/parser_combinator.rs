@@ -189,7 +189,22 @@ pub fn por<'a, T>(
 ) -> impl Fn(ContinuationState<'a>) -> ParseResult<T> {
     move |input| {
         let result1 = parser1(input);
-        result1.or_else(|_error1| parser2(input))
+        result1.or_else(|error| {
+            let result = parser2(input);
+            match result {
+                Ok((token, state)) => Ok((token, state)),
+                Err(error2) => {
+                    let error = Error::new(
+                        error.expected + " or " + &error2.expected,
+                        error2.actual,
+                        error2.position,
+                        error2.line_number,
+                        error2.line_position,
+                    );
+                    Err(error)
+                }
+            }
+        }) //todo
     }
 }
 
