@@ -157,7 +157,7 @@ pub fn pstring<'a>(value: &'a str) -> impl Fn(ContinuationState<'a>) -> ParseRes
         }
         match error {
             Some(err) => err,
-            None => Ok((Token::new(value, 0, value.len()), cont)), //This seems to work, but I dont know why!
+            None => Ok((Token::new(value, input.position, value.len()), cont)), //This seems to work, but I dont know why!
         }
     }
 }
@@ -165,17 +165,15 @@ pub fn pstring<'a>(value: &'a str) -> impl Fn(ContinuationState<'a>) -> ParseRes
 pub fn pthen<'a, T, U>(
     parser1: impl Fn(ContinuationState<'a>) -> ParseResult<T>,
     parser2: impl Fn(ContinuationState<'a>) -> ParseResult<U>,
-) -> impl Fn(ContinuationState<'a>) -> ParseResult<(T, U)> {
+) -> impl Fn(ContinuationState<'a>) -> ParseResult<(Token<T>, Token<U>)> {
     move |input| {
         let result1 = parser1(input);
         result1.and_then(|(token1, state1)| {
             let result2 = parser2(state1);
             result2.map(|(token2, state2)| {
-                let token = Token::new(
-                    (token1.value, token2.value),
-                    token1.start,
-                    token1.length + token2.length,
-                );
+                let start = token1.start;
+                let length = token1.length + token2.length;
+                let token = Token::new((token1, token2), start, length);
                 (token, state2)
             })
         })
@@ -202,7 +200,7 @@ pub fn poptional<'a, T>(
                 Token::new(Some(token.value), token.start, token.length),
                 state,
             )),
-            Err(_error1) => Ok((Token::new(None, 0, 0), input)),
+            Err(_error1) => Ok((Token::new(None, input.position, 0), input)),
         }
     }
 }
@@ -251,17 +249,17 @@ macro_rules! pany {
 
 pub fn pmany<'a, T>(
     parser: impl Fn(ContinuationState<'a>) -> ParseResult<T>,
-) -> impl Fn(ContinuationState<'a>) -> ParseResult<'a, Vec<T>> {
+) -> impl Fn(ContinuationState<'a>) -> ParseResult<'a, Vec<Token<T>>> {
     move |input| {
         let mut results = Vec::new();
-        let mut input = input;
+        let mut cont = input;
         let mut error = None;
         loop {
-            let result = parser(input);
+            let result = parser(cont);
             match result {
                 Ok((token, state)) => {
-                    results.push(token.value);
-                    input = state;
+                    results.push(token);
+                    cont = state;
                 }
                 Err(err) => {
                     error = Some(err);
@@ -276,12 +274,47 @@ pub fn pmany<'a, T>(
                 if len == 0 {
                     Err(err)
                 } else {
-                    Ok((Token::new(results, 0, len), input))
+                    Ok((Token::new(results, input.position, len), cont))
                 }
             }
             None => Ok((Token::new(results, 0, len), input)),
         }
     }
+}
+
+pub fn pleft<'a, T, U>(
+    parser: impl Fn(ContinuationState<'a>) -> ParseResult<(Token<T>, Token<U>)>,
+) -> impl Fn(ContinuationState<'a>) -> ParseResult<T> {
+    move |input| {
+        let result = parser(input);
+        result.map(|(token, cont)| {
+            let token = token.value.0;
+            (token, cont)
+        })
+    }
+}
+
+pub fn pright<'a, T, U>(
+    parser: impl Fn(ContinuationState<'a>) -> ParseResult<(Token<T>, Token<U>)>,
+) -> impl Fn(ContinuationState<'a>) -> ParseResult<U> {
+    move |input| {
+        let result = parser(input);
+        result.map(|(token, cont)| {
+            let token = token.value.1;
+            (token, cont)
+        })
+    }
+}
+
+pub fn pbetween<'a, T, U, V>(
+    parser1: impl Fn(ContinuationState<'a>) -> ParseResult<T>,
+    parser2: impl Fn(ContinuationState<'a>) -> ParseResult<U>,
+    parser3: impl Fn(ContinuationState<'a>) -> ParseResult<V>,
+) -> impl Fn(ContinuationState<'a>) -> ParseResult<U> {
+    let parser = pthen(parser1, pthen(parser2, parser3));
+    let parser = pright(parser); //Skip T
+    let parser = pleft(parser); //Ignore U
+    parser
 }
 
 mod tests {
@@ -328,7 +361,7 @@ mod tests {
         let result = parser("Hello".into());
         let expected = Ok((
             Token {
-                value: ('H', 'e'),
+                value: (Token::new('H', 0, 1), Token::new('e', 1, 1)),
                 start: 0,
                 length: 2,
             },
@@ -348,7 +381,7 @@ mod tests {
         let result = parser("He".into());
         let expected = Ok((
             Token {
-                value: ('H', 'e'),
+                value: (Token::new('H', 0, 1), Token::new('e', 1, 1)),
                 start: 0,
                 length: 2,
             },
@@ -596,7 +629,12 @@ mod tests {
         let result = parser("aaaa".into());
         let expected = Ok((
             Token {
-                value: vec!['a', 'a', 'a', 'a'],
+                value: vec![
+                    Token::new('a', 0, 1),
+                    Token::new('a', 1, 1),
+                    Token::new('a', 2, 1),
+                    Token::new('a', 3, 1),
+                ],
                 start: 0,
                 length: 4,
             },
@@ -616,7 +654,11 @@ mod tests {
         let result = parser("aaab".into());
         let expected = Ok((
             Token {
-                value: vec!['a', 'a', 'a'],
+                value: vec![
+                    Token::new('a', 0, 1),
+                    Token::new('a', 1, 1),
+                    Token::new('a', 2, 1),
+                ],
                 start: 0,
                 length: 3,
             },
@@ -625,6 +667,30 @@ mod tests {
                 position: 3,
                 line_number: 0,
                 line_position: 3,
+            },
+        ));
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_between() {
+        let parser = pbetween(pchar('('), pmany(pchar('a')), pchar(')'));
+        let result = parser("(aaa)".into());
+        let expected = Ok((
+            Token {
+                value: vec![
+                    Token::new('a', 1, 1),
+                    Token::new('a', 2, 1),
+                    Token::new('a', 3, 1),
+                ],
+                start: 1,
+                length: 3,
+            },
+            ContinuationState {
+                remaining: "",
+                position: 5,
+                line_number: 0,
+                line_position: 5,
             },
         ));
         assert_eq!(result, expected);

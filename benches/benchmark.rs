@@ -56,17 +56,14 @@ fn parse_int_success(c: &mut Criterion) {
     let many_numbers = pmany(any_number);
     let number_parser = pthen(poptional(pchar('-')), many_numbers);
 
-    let to_number = pmap(
-        number_parser,
-        move |(negate, value): (Option<char>, Vec<char>)| {
-            let string: String = value.into_iter().collect();
-            let number = string.parse::<i32>().unwrap();
-            match negate {
-                Some(_) => -number,
-                None => number,
-            }
-        },
-    );
+    let to_number = pmap(number_parser, move |(negate, value)| {
+        let string: String = value.value.into_iter().map(|c| c.value).collect();
+        let number = string.parse::<i32>().unwrap();
+        match negate.value {
+            Some(_) => -number,
+            None => number,
+        }
+    });
 
     c.bench_function("Parse int Success", |b| {
         b.iter(|| {
