@@ -278,9 +278,12 @@ pub fn pany<'a>(
         } else {
             "".to_string() //TODO - this should never happen
         };
+
+        let actual = input.remaining.chars().next().unwrap_or(' ').to_string();
+
         Err(Error::new(
             error,
-            'd'.to_string(), //TODO
+            actual,
             input.position,
             input.line_number,
             input.line_position,
