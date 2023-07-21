@@ -1,7 +1,4 @@
-use std::{
-    f32::consts::E,
-    fmt::{self, Debug, Display, Formatter},
-};
+use std::fmt::{self, Debug, Display, Formatter};
 
 #[derive(Debug, PartialEq)]
 pub struct Token<T> {
@@ -101,6 +98,15 @@ impl Debug for Error {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         write!(f, "{}", self.format_error())
     }
+}
+
+fn combine_error(error1: Error, error2: Error) -> Error {
+    let expected = error1.expected.clone() + " or " + &error2.expected;
+    let actual = error2.actual.clone();
+    let position = error2.position;
+    let line_number = error2.line_number;
+    let line_position = error2.line_position;
+    Error::new(expected, actual, position, line_number, line_position)
 }
 
 pub type ParseResult<'a, Output> = Result<(Token<Output>, ContinuationState<'a>), Error>;
@@ -204,7 +210,7 @@ pub fn por<'a, T>(
                     Err(error)
                 }
             }
-        }) //todo
+        })
     }
 }
 
@@ -245,27 +251,12 @@ macro_rules! pchoice {
     ($head:expr, $($tail:expr),*) => ({
         move |input| {
             let result1 = $head(input);
-            result1.or_else(|_error1| pchoice!($($tail),*)(input))
+            result1.or_else(|error1|{
+                let result = pchoice!($($tail),*)(input);
+                result.map_err(|error2| combine_error(error1, error2))
+            })
         }});
 }
-
-/*
-#[macro_export]
-macro_rules! pany {
-    ($head:expr) => ({
-        move |input| {
-            let parser = pchar($head);
-            parser(input)
-         } //TODO - we should accumulate the errors for choice (ie "a" or "b" )
-    });
-    ($head:expr, $($tail:expr),*) => ({
-        move |input| {
-            let parser = pchar($head);
-            let result1 = parser(input);
-            result1.or_else(|error| pany!($($tail),*)(input))
-        }});
-}
- */
 
 pub fn pany<'a>(
     valid_chars: &'a [char],
@@ -628,10 +619,10 @@ mod tests {
     #[test]
     fn test_pchoice_success() {
         let parser = pchoice!(pchar('a'), pchar('b'));
-        let result = parser("b".into());
+        let result = parser("a".into());
         let expected = Ok((
             Token {
-                value: 'b',
+                value: 'a',
                 start: 0,
                 length: 1,
             },
@@ -649,7 +640,7 @@ mod tests {
     fn test_pchoice_fail() {
         let parser = pchoice!(pchar('a'), pchar('b'));
         let result = parser("c".into());
-        let expected = Err(Error::new("b".to_string(), "c".to_string(), 0, 0, 0));
+        let expected = Err(Error::new("a or b".to_string(), "c".to_string(), 0, 0, 0));
         assert_eq!(result, expected);
     }
 
