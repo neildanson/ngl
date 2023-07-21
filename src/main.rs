@@ -9,12 +9,12 @@ enum Value {
 }
 
 fn main() {
-    let any_number = pany!('0', '1', '2', '3', '4', '5', '6', '7', '8', '9');
-    let pidentifier = pany!(
+    let any_number = pany(&['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']);
+    let pidentifier = pany(&[
         'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r',
-        's', 't', 'u', 'v', 'w', 'x', 'y', 'z'
-    );
-    let pws = || poptional(pany!(' ', '\n', '\t', '\r'));
+        's', 't', 'u', 'v', 'w', 'x', 'y', 'z',
+    ]);
+    let pws = || poptional(pany(&[' ', '\n', '\t', '\r']));
 
     let many_numbers = pmany(any_number);
     let number_parser = pthen(poptional(pchar('-')), many_numbers);
