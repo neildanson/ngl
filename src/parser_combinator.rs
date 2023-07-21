@@ -494,6 +494,14 @@ mod tests {
     }
 
     #[test]
+    fn test_por_success_fail() {
+        let parser = por(pchar('H'), pchar('h'));
+        let result = parser("e".into());
+        let expected = Err(Error::new("H or h".to_string(), "e".to_string(), 0, 0, 0));
+        assert_eq!(result, expected);
+    }
+
+    #[test]
     fn test_pmap_success() {
         let parser = pmap(pchar('T'), |_| true);
         let result = parser("T".into());
