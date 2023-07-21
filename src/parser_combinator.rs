@@ -307,11 +307,14 @@ pub fn pright<'a, T, U>(
 }
 
 pub fn pbetween<'a, T, U, V>(
-    parser1: impl Fn(ContinuationState<'a>) -> ParseResult<(Token<T>,Token<U>)>,
-    parser2: impl Fn(ContinuationState<'a>) -> ParseResult<(Token<U>,Token<V>)>,
+    parser1: impl Fn(ContinuationState<'a>) -> ParseResult<T>,
+    parser2: impl Fn(ContinuationState<'a>) -> ParseResult<U>,
+    parser3: impl Fn(ContinuationState<'a>) -> ParseResult<V>,
 ) -> impl Fn(ContinuationState<'a>) -> ParseResult<U> {
-    let parser = pthen(parser1, parser2);
-    let parser = pleft(parser);
+    let parser = pthen(parser1, pthen(parser2, parser3));
+    let parser = pright(parser); //Skip T
+    let parser = pleft(parser); //Ignore U
+    parser
 }
 
 mod tests {

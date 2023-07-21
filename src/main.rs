@@ -34,6 +34,8 @@ fn main() {
 
     let pvalue = por(pnumber, pbool);
 
+    let pvalue = pbetween(pchar('('), pvalue, pchar(')'));
+
     let let_binding = pleft(pthen(pstring("let"), pws()));
     let let_binding = pright(pthen(let_binding, pidentifier));
     let let_binding = pleft(pthen(let_binding, pws()));
@@ -43,6 +45,6 @@ fn main() {
     let let_binding = pleft(pthen(let_binding, pws()));
     let let_binding = pleft(pthen(let_binding, pchar(';')));
 
-    let result = let_binding("let x = true;".into());
+    let result = let_binding("let x = (true);".into());
     println!("{:?}", result);
 }
