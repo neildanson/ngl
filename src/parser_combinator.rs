@@ -1,4 +1,7 @@
-use std::fmt::{self, Debug, Display, Formatter};
+use std::{
+    f32::consts::E,
+    fmt::{self, Debug, Display, Formatter},
+};
 
 #[derive(Debug, PartialEq)]
 pub struct Token<T> {
@@ -103,34 +106,34 @@ impl Debug for Error {
 pub type ParseResult<'a, Output> = Result<(Token<Output>, ContinuationState<'a>), Error>;
 
 pub fn pchar<'a>(c: char) -> impl Fn(ContinuationState<'a>) -> ParseResult<char> {
-    move |state| {
-        let mut chars = state.remaining.chars();
+    move |input| {
+        let mut chars = input.remaining.chars();
         match chars.next() {
             Some(letter) if letter == c => {
                 let new_line = if letter == '\n' { 1 } else { 0 };
-                let parser_state = state.advance(1, new_line);
-                Ok((Token::new(c, state.position, 1), parser_state))
+                let parser_state = input.advance(1, new_line);
+                Ok((Token::new(c, input.position, 1), parser_state))
             }
             Some(letter) => Err(Error::new(
                 c.to_string(),
                 letter.to_string(),
-                state.position,
-                state.line_number,
-                state.line_position,
+                input.position,
+                input.line_number,
+                input.line_position,
             )),
             None => Err(Error::new(
                 c.to_string(),
                 "".to_string(),
-                state.position,
-                state.line_number,
-                state.line_position,
+                input.position,
+                input.line_number,
+                input.line_position,
             )),
         }
     }
 }
 
 pub fn pstring<'a>(value: &'a str) -> impl Fn(ContinuationState<'a>) -> ParseResult<'a, &'a str> {
-    |input| {
+    move |input| {
         let mut cont = input;
         let mut error = None;
         let mut success = Vec::new();
@@ -186,7 +189,22 @@ pub fn por<'a, T>(
 ) -> impl Fn(ContinuationState<'a>) -> ParseResult<T> {
     move |input| {
         let result1 = parser1(input);
-        result1.or_else(|_error1| parser2(input))
+        result1.or_else(|error| {
+            let result = parser2(input);
+            match result {
+                Ok((token, state)) => Ok((token, state)),
+                Err(error2) => {
+                    let error = Error::new(
+                        error.expected + " or " + &error2.expected,
+                        error2.actual,
+                        error2.position,
+                        error2.line_number,
+                        error2.line_position,
+                    );
+                    Err(error)
+                }
+            }
+        }) //todo
     }
 }
 
@@ -231,6 +249,7 @@ macro_rules! pchoice {
         }});
 }
 
+/*
 #[macro_export]
 macro_rules! pany {
     ($head:expr) => ({
@@ -243,8 +262,48 @@ macro_rules! pany {
         move |input| {
             let parser = pchar($head);
             let result1 = parser(input);
-            result1.or_else(|_error1| pany!($($tail),*)(input))
+            result1.or_else(|error| pany!($($tail),*)(input))
         }});
+}
+ */
+
+pub fn pany<'a>(
+    valid_chars: &'a [char],
+) -> impl Fn(ContinuationState<'a>) -> ParseResult<'a, char> {
+    move |input| {
+        for c in valid_chars {
+            let result = pchar(*c)(input);
+            match result {
+                Ok((token, state)) => return Ok((token, state)),
+                Err(_) => continue,
+            }
+        }
+
+        let valid_chars_length = valid_chars.len();
+        let error = if valid_chars_length >= 2 {
+            let first = valid_chars
+                .iter()
+                .take(valid_chars.len() - 1)
+                .map(|x| x.to_string())
+                .collect::<Vec<_>>()
+                .join(", ");
+            first + " or " + &valid_chars.last().unwrap().to_string()
+        } else if valid_chars_length == 1 {
+            valid_chars.iter().next().unwrap().to_string()
+        } else {
+            "".to_string() //TODO - this should never happen
+        };
+
+        let actual = input.remaining.chars().next().unwrap_or(' ').to_string();
+
+        Err(Error::new(
+            error,
+            actual,
+            input.position,
+            input.line_number,
+            input.line_position,
+        ))
+    }
 }
 
 pub fn pmany<'a, T>(
@@ -313,8 +372,7 @@ pub fn pbetween<'a, T, U, V>(
 ) -> impl Fn(ContinuationState<'a>) -> ParseResult<U> {
     let parser = pthen(parser1, pthen(parser2, parser3));
     let parser = pright(parser); //Skip T
-    let parser = pleft(parser); //Ignore U
-    parser
+    pleft(parser) //Ignore U
 }
 
 mod tests {
@@ -432,6 +490,14 @@ mod tests {
                 line_position: 1,
             },
         ));
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_por_success_fail() {
+        let parser = por(pchar('H'), pchar('h'));
+        let result = parser("e".into());
+        let expected = Err(Error::new("H or h".to_string(), "e".to_string(), 0, 0, 0));
         assert_eq!(result, expected);
     }
 
@@ -589,7 +655,7 @@ mod tests {
 
     #[test]
     fn test_pany_success() {
-        let parser = pany!('a', 'b', 'c');
+        let parser = pany(&['a', 'b', 'c']);
         let result = parser("b".into());
         let expected = Ok((
             Token {
@@ -609,9 +675,15 @@ mod tests {
 
     #[test]
     fn test_pany_fail() {
-        let parser = pany!('a', 'b', 'c');
+        let parser = pany(&['a', 'b', 'c']);
         let result = parser("d".into());
-        let expected = Err(Error::new("c".to_string(), "d".to_string(), 0, 0, 0));
+        let expected = Err(Error::new(
+            "a, b or c".to_string(),
+            "d".to_string(),
+            0,
+            0,
+            0,
+        ));
         assert_eq!(result, expected);
     }
 
