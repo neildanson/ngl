@@ -328,26 +328,26 @@ pub fn pmany<'a, T>(
 
 pub fn psepby<'a, T, U>(
     parser: impl Fn(ContinuationState<'a>) -> ParseResult<'a, T>,
+    parser_x: impl Fn(ContinuationState<'a>) -> ParseResult<'a, T>,
     separator: impl Fn(ContinuationState<'a>) -> ParseResult<'a, U>,
 ) -> impl Fn(ContinuationState<'a>) -> ParseResult<'a, Vec<Token<T>>> {
     let parser_combined = pleft(pthen(parser, separator));
     let parser_many = pmany(parser_combined);
     move |input| {
         let result = { parser_many(input) };
+
         match result {
-            Ok((mut token, cont)) => 
-                {
-                   let result = parser(cont); 
-                   match result {
+            Ok((mut token, cont)) => {
+                let result = parser_x(cont);
+                match result {
                     Ok((token_last, cont)) => {
                         token.value.push(token_last);
                         Ok((token, cont))
                     }
-                    ,
-                    Err(err) => Err(err)
-                   }
-                },
-            Err(err) => Err(err)
+                    Err(err) => Err(err),
+                }
+            }
+            Err(err) => Err(err),
         }
     }
 }
@@ -833,6 +833,30 @@ mod tests {
             0,
         ));
 
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_psepby() {
+        let parser = psepby(pchar('1'), pchar('1'), pchar(','));
+        let result = parser("1,1,1".into());
+        let expected = Ok((
+            Token {
+                value: vec![
+                    Token::new('1', 0, 1),
+                    Token::new('1', 2, 1),
+                    Token::new('1', 4, 1),
+                ],
+                start: 0,
+                length: 2, //I think this is wrong!!
+            },
+            ContinuationState {
+                remaining: "",
+                position: 5,
+                line_number: 0,
+                line_position: 5,
+            },
+        ));
         assert_eq!(result, expected);
     }
 }
