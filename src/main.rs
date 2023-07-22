@@ -16,7 +16,7 @@ fn main() {
     ]);
     let pws = || poptional(pany(&[' ', '\n', '\t', '\r']));
 
-    let many_numbers = pmany(any_number);
+    let many_numbers = pmany1(any_number);
     let number_parser = pthen(poptional(pchar('-')), many_numbers);
     let pnumber = pmap(number_parser, move |(negate, value)| {
         let string: String = value.value.into_iter().map(|c| c.value).collect();

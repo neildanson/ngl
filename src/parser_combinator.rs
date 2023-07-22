@@ -384,7 +384,7 @@ pub fn p1<'a, T>(
     }
 }
 
-fn pmany1<'a, T>(
+pub fn pmany1<'a, T>(
     parser: impl Fn(ContinuationState<'a>) -> ParseResult<T>,
 ) -> impl Fn(ContinuationState<'a>) -> ParseResult<'a, Vec<Token<T>>> {
     p1(pmany(parser))
