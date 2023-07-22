@@ -215,10 +215,10 @@ pub fn por<'a, T>(
 }
 
 pub fn poptional<'a, T>(
-    parser1: impl Fn(ContinuationState<'a>) -> ParseResult<T>,
+    parser: impl Fn(ContinuationState<'a>) -> ParseResult<T>,
 ) -> impl Fn(ContinuationState<'a>) -> ParseResult<Option<T>> {
     move |input| {
-        let result1 = parser1(input);
+        let result1 = parser(input);
         match result1 {
             Ok((token, state)) => Ok((
                 Token::new(Some(token.value), token.start, token.length),
@@ -322,6 +322,32 @@ pub fn pmany<'a, T>(
         match error {
             Some(_) => Ok((Token::new(results, input.position, len), cont)),
             None => Ok((Token::new(results, 0, len), input)),
+        }
+    }
+}
+
+pub fn psepby<'a, T, U>(
+    parser: impl Fn(ContinuationState<'a>) -> ParseResult<'a, T>,
+    separator: impl Fn(ContinuationState<'a>) -> ParseResult<'a, U>,
+) -> impl Fn(ContinuationState<'a>) -> ParseResult<'a, Vec<Token<T>>> {
+    let parser_combined = pleft(pthen(parser, separator));
+    let parser_many = pmany(parser_combined);
+    move |input| {
+        let result = { parser_many(input) };
+        match result {
+            Ok((mut token, cont)) => 
+                {
+                   let result = parser(cont); 
+                   match result {
+                    Ok((token_last, cont)) => {
+                        token.value.push(token_last);
+                        Ok((token, cont))
+                    }
+                    ,
+                    Err(err) => Err(err)
+                   }
+                },
+            Err(err) => Err(err)
         }
     }
 }
