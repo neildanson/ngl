@@ -320,13 +320,7 @@ pub fn pmany<'a, T>(
 
         let len = results.len();
         match error {
-            Some(err) => {
-                if len == 0 {
-                    Err(err)
-                } else {
-                    Ok((Token::new(results, input.position, len), cont))
-                }
-            }
+            Some(_) => Ok((Token::new(results, input.position, len), cont)),
             None => Ok((Token::new(results, 0, len), input)),
         }
     }
@@ -364,6 +358,36 @@ pub fn pbetween<'a, T, U, V>(
     let parser = pthen(parser1, pthen(parser2, parser3));
     let parser = pright(parser); //Skip T
     pleft(parser) //Ignore U
+}
+
+pub fn p1<'a, T>(
+    parser: impl Fn(ContinuationState<'a>) -> ParseResult<'a, Vec<Token<T>>>,
+) -> impl Fn(ContinuationState<'a>) -> ParseResult<'a, Vec<Token<T>>> {
+    move |input| {
+        let result = parser(input);
+        match result {
+            Ok((token, cont)) => {
+                if token.length == 0 {
+                    Err(Error::new(
+                        "1 or more".to_string(),
+                        cont.remaining.to_string(),
+                        input.position,
+                        input.line_number,
+                        input.line_position,
+                    ))
+                } else {
+                    Ok((token, cont))
+                }
+            }
+            Err(err) => Err(err),
+        }
+    }
+}
+
+fn pmany1<'a, T>(
+    parser: impl Fn(ContinuationState<'a>) -> ParseResult<T>,
+) -> impl Fn(ContinuationState<'a>) -> ParseResult<'a, Vec<Token<T>>> {
+    p1(pmany(parser))
 }
 
 mod tests {
@@ -682,7 +706,19 @@ mod tests {
     fn test_pmany_0() {
         let parser = pmany(pchar('a'));
         let result = parser("b".into());
-        let expected = Err(Error::new("a".to_string(), "b".to_string(), 0, 0, 0));
+        let expected = Ok((
+            Token {
+                value: vec![],
+                start: 0,
+                length: 0,
+            },
+            ContinuationState {
+                remaining: "b",
+                position: 0,
+                line_number: 0,
+                line_position: 0,
+            },
+        ));
         assert_eq!(result, expected);
     }
 
@@ -756,6 +792,21 @@ mod tests {
                 line_position: 5,
             },
         ));
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_pmany1() {
+        let parser = pmany1(pchar('1'));
+        let result = parser("0".into());
+        let expected = Err(Error::new(
+            "1 or more".to_string(),
+            "0".to_string(),
+            0,
+            0,
+            0,
+        ));
+
         assert_eq!(result, expected);
     }
 }
