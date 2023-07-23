@@ -10,10 +10,12 @@ enum Value {
 
 fn main() {
     let any_number = pany(&['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']);
-    let pidentifier = pany(&[
-        'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r',
-        's', 't', 'u', 'v', 'w', 'x', 'y', 'z',
-    ]);
+    let pidentifier = || {
+        pany(&[
+            'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q',
+            'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z',
+        ])
+    };
     let pws = || poptional(pany(&[' ', '\n', '\t', '\r']));
 
     let many_numbers = pmany1(any_number);
@@ -37,7 +39,7 @@ fn main() {
     let pvalue = pbetween(pchar('('), pvalue, pchar(')'));
 
     let let_binding = pleft(pthen(pstring("let"), pws()));
-    let let_binding = pright(pthen(let_binding, pidentifier));
+    let let_binding = pright(pthen(let_binding, pidentifier()));
     let let_binding = pleft(pthen(let_binding, pws()));
     let let_binding = pleft(pthen(let_binding, pchar('=')));
     let let_binding = pleft(pthen(let_binding, pws()));
@@ -45,6 +47,31 @@ fn main() {
     let let_binding = pleft(pthen(let_binding, pws()));
     let let_binding = pleft(pthen(let_binding, pchar(';')));
 
-    let result = let_binding("let x = (furn);".into());
+    let param_binding = pthen(pidentifier(), pws());
+    let param_binding = pleft(pthen(param_binding, pchar(':')));
+    let param_binding = pleft(pthen(param_binding, pws()));
+    let param_binding = pthen(param_binding, pidentifier());
+
+    let fun_binding = pleft(pthen(pstring("fun"), pws()));
+    let fun_binding = pright(pthen(fun_binding, pidentifier()));
+    let fun_binding = pleft(pthen(fun_binding, pws()));
+    let fun_binding = pleft(pthen(fun_binding, pchar('(')));
+    let fun_binding = pleft(pthen(fun_binding, pws()));
+    let fun_binding = pthen(fun_binding, psepby(|| param_binding, pchar(',')));
+    let fun_binding = pleft(pthen(fun_binding, pws()));
+    let fun_binding = pleft(pthen(fun_binding, pchar(')')));
+    let fun_binding = pleft(pthen(fun_binding, pws()));
+    let fun_binding = pleft(pthen(fun_binding, pchar('{')));
+    let fun_binding = pleft(pthen(fun_binding, pws()));
+    let fun_binding = pthen(fun_binding, pmany(let_binding));
+
+    let result = fun_binding(
+        "fun f(x: y) {
+            let x = 1;  
+        }"
+        .into(),
+    );
+    //let result = let_binding("let x = (furn);".into());
+
     println!("{:?}", result);
 }
