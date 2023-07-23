@@ -851,4 +851,12 @@ mod tests {
         ));
         assert_eq!(result, expected);
     }
+
+    #[test]
+    fn test_psepby_missing_trail() {
+        let parser = psepby(|| pchar('1'), pchar(','));
+        let result = parser("1,1,".into());
+        let expected = Err(Error::new("1".to_string(), "".to_string(), 4, 0, 4));
+        assert_eq!(result, expected);
+    }
 }
