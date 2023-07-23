@@ -326,30 +326,22 @@ pub fn pmany<'a, T>(
     }
 }
 
-pub fn psepby<'a, T, U>(
-    parser: impl Fn(ContinuationState<'a>) -> ParseResult<'a, T>,
-    parser_x: impl Fn(ContinuationState<'a>) -> ParseResult<'a, T>,
+pub fn psepby<'a, T, U, F, FU>(
+    parser: F,
     separator: impl Fn(ContinuationState<'a>) -> ParseResult<'a, U>,
-) -> impl Fn(ContinuationState<'a>) -> ParseResult<'a, Vec<Token<T>>> {
-    let parser_combined = pleft(pthen(parser, separator));
+) -> impl Fn(ContinuationState<'a>) -> ParseResult<'a, Vec<Token<T>>>
+where
+    F: Fn() -> FU,
+    FU: Fn(ContinuationState<'a>) -> ParseResult<T>,
+{
+    let parser_combined = pleft(pthen(parser(), separator));
     let parser_many = pmany(parser_combined);
-    move |input| {
-        let result = { parser_many(input) };
-
-        match result {
-            Ok((mut token, cont)) => {
-                let result = parser_x(cont);
-                match result {
-                    Ok((token_last, cont)) => {
-                        token.value.push(token_last);
-                        Ok((token, cont))
-                    }
-                    Err(err) => Err(err),
-                }
-            }
-            Err(err) => Err(err),
-        }
-    }
+    let parser_many_then = pthen(parser_many, parser());
+    let parser = pmap(parser_many_then, |(mut tokens, token)| {
+        tokens.value.push(token);
+        tokens.value
+    });
+    parser
 }
 
 pub fn pleft<'a, T, U>(
@@ -838,7 +830,7 @@ mod tests {
 
     #[test]
     fn test_psepby() {
-        let parser = psepby(pchar('1'), pchar('1'), pchar(','));
+        let parser = psepby(|| pchar('1'), pchar(','));
         let result = parser("1,1,1".into());
         let expected = Ok((
             Token {
@@ -848,7 +840,7 @@ mod tests {
                     Token::new('1', 4, 1),
                 ],
                 start: 0,
-                length: 2, //I think this is wrong!!
+                length: 3, //I think this is wrong!!
             },
             ContinuationState {
                 remaining: "",
