@@ -215,10 +215,10 @@ pub fn por<'a, T>(
 }
 
 pub fn poptional<'a, T>(
-    parser1: impl Fn(ContinuationState<'a>) -> ParseResult<T>,
+    parser: impl Fn(ContinuationState<'a>) -> ParseResult<T>,
 ) -> impl Fn(ContinuationState<'a>) -> ParseResult<Option<T>> {
     move |input| {
-        let result1 = parser1(input);
+        let result1 = parser(input);
         match result1 {
             Ok((token, state)) => Ok((
                 Token::new(Some(token.value), token.start, token.length),
@@ -324,6 +324,24 @@ pub fn pmany<'a, T>(
             None => Ok((Token::new(results, 0, len), input)),
         }
     }
+}
+
+pub fn psepby<'a, T, U, F, FU>(
+    parser: F,
+    separator: impl Fn(ContinuationState<'a>) -> ParseResult<'a, U>,
+) -> impl Fn(ContinuationState<'a>) -> ParseResult<'a, Vec<Token<T>>>
+where
+    F: Fn() -> FU,
+    FU: Fn(ContinuationState<'a>) -> ParseResult<T>,
+{
+    let parser_combined = pleft(pthen(parser(), separator));
+    let parser_many = pmany(parser_combined);
+    let parser_many_then = pthen(parser_many, parser());
+    let parser = pmap(parser_many_then, |(mut tokens, token)| {
+        tokens.value.push(token);
+        tokens.value
+    });
+    parser
 }
 
 pub fn pleft<'a, T, U>(
@@ -807,6 +825,38 @@ mod tests {
             0,
         ));
 
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_psepby() {
+        let parser = psepby(|| pchar('1'), pchar(','));
+        let result = parser("1,1,1".into());
+        let expected = Ok((
+            Token {
+                value: vec![
+                    Token::new('1', 0, 1),
+                    Token::new('1', 2, 1),
+                    Token::new('1', 4, 1),
+                ],
+                start: 0,
+                length: 3, //I think this is wrong!!
+            },
+            ContinuationState {
+                remaining: "",
+                position: 5,
+                line_number: 0,
+                line_position: 5,
+            },
+        ));
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_psepby_missing_trail() {
+        let parser = psepby(|| pchar('1'), pchar(','));
+        let result = parser("1,1,".into());
+        let expected = Err(Error::new("1".to_string(), "".to_string(), 4, 0, 4));
         assert_eq!(result, expected);
     }
 }
