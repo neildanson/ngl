@@ -36,6 +36,7 @@ fn main() {
     let let_binding = pthen(let_binding, pvalue);
     let let_binding = pleft(pthen(let_binding, pws()));
     let let_binding = pleft(pthen(let_binding, pchar(';')));
+    let let_binding = pleft(pthen(let_binding, pws()));
 
     let fun_binding = pleft(pthen(pstring("fun"), pws()));
     let fun_binding = pright(pthen(fun_binding, pidentifier()));
@@ -53,8 +54,9 @@ fn main() {
     let fun_binding = pleft(pthen(fun_binding, pchar('}')));
 
     let result = fun_binding(
-        "fun f(x: y) {
-            let x = 1;  
+        "fun n(x: y) {
+            let x = 1; 
+            let y = 2;   
         }"
         .into(),
     );
