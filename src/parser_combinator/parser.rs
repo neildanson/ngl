@@ -147,7 +147,7 @@ macro_rules! pchoice {
             let result1 = $head(input);
             result1.or_else(|error1|{
                 let result = pchoice!($($tail),*)(input);
-                result.map_err(|error2| combine_error(error1, error2))
+                result.map_err(|error2| error1 + error2)
             })
         }});
 }

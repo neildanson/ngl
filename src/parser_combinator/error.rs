@@ -1,4 +1,7 @@
-use std::fmt::{self, Debug, Display, Formatter};
+use std::{
+    fmt::{self, Debug, Display, Formatter},
+    ops::Add,
+};
 
 #[derive(PartialEq)]
 pub struct Error {
@@ -45,11 +48,15 @@ impl Debug for Error {
     }
 }
 
-pub fn combine_error(error1: Error, error2: Error) -> Error {
-    let expected = error1.expected.clone() + " or " + &error2.expected;
-    let actual = error2.actual.clone();
-    let position = error2.position;
-    let line_number = error2.line_number;
-    let line_position = error2.line_position;
-    Error::new(expected, actual, position, line_number, line_position)
+impl Add for Error {
+    type Output = Error;
+
+    fn add(self, other: Error) -> Self::Output {
+        let expected = self.expected.clone() + " or " + &other.expected;
+        let actual = other.actual.clone();
+        let position = other.position;
+        let line_number = other.line_number;
+        let line_position = other.line_position;
+        Error::new(expected, actual, position, line_number, line_position)
+    }
 }
