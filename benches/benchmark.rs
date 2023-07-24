@@ -2,7 +2,7 @@ extern crate ngl;
 
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 
-use ngl::*;
+use ngl::parser_combinator::*;
 
 fn parse_char_success(c: &mut Criterion) {
     let truthy_parser = por(pchar('t'), pchar('f'));
