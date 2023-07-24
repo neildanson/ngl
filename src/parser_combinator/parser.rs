@@ -1,5 +1,5 @@
 use crate::{
-    parser_combinator::continuation::ContinuationState, parser_combinator::error::Error,
+    parser_combinator::continuation::ContinuationState, parser_combinator::error::*,
     parser_combinator::token::Token,
 };
 

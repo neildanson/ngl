@@ -45,7 +45,7 @@ impl Debug for Error {
     }
 }
 
-fn combine_error(error1: Error, error2: Error) -> Error {
+pub fn combine_error(error1: Error, error2: Error) -> Error {
     let expected = error1.expected.clone() + " or " + &error2.expected;
     let actual = error2.actual.clone();
     let position = error2.position;
