@@ -1,6 +1,6 @@
 mod parser_combinator;
 
-use parser_combinator::*;
+use ngl::parser_combinator::*;
 
 #[derive(Debug)]
 enum Value {
