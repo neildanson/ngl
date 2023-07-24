@@ -43,7 +43,7 @@ fn main() {
     let fun_binding = pleft(pthen(fun_binding, pws()));
     let fun_binding = pleft(pthen(fun_binding, pchar('(')));
     let fun_binding = pleft(pthen(fun_binding, pws()));
-    let fun_binding = pthen(fun_binding, psepby(param_binding, pchar(',')));
+    let fun_binding = pthen(fun_binding, psepby(param_binding, pthen(pchar(','), pws())));
     let fun_binding = pleft(pthen(fun_binding, pws()));
     let fun_binding = pleft(pthen(fun_binding, pchar(')')));
     let fun_binding = pleft(pthen(fun_binding, pws()));
@@ -54,7 +54,7 @@ fn main() {
     let fun_binding = pleft(pthen(fun_binding, pchar('}')));
 
     let result = fun_binding(
-        "fun name(param: type) {
+        "fun name(param: type, paramx: typex) {
             let x = 1; 
             let y = 2;   
         }"
@@ -85,5 +85,6 @@ fn param_binding<'a>(
     let param_binding = pleft(pthen(param_binding, pchar(':')));
     let param_binding = pleft(pthen(param_binding, pws()));
     let param_binding = pthen(param_binding, pidentifier());
+    let param_binding = pleft(pthen(param_binding, pws()));
     param_binding
 }
