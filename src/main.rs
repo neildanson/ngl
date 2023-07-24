@@ -54,7 +54,7 @@ fn main() {
     let fun_binding = pleft(pthen(fun_binding, pchar('}')));
 
     let result = fun_binding(
-        "fun n(x: y) {
+        "fun name(param: type) {
             let x = 1; 
             let y = 2;   
         }"
@@ -64,19 +64,23 @@ fn main() {
     println!("{:?}", result);
 }
 
-fn pidentifier<'a>() -> impl Fn(ContinuationState<'a>) -> ParseResult<char> {
-    pany(&[
+fn pidentifier<'a>() -> impl Fn(ContinuationState<'a>) -> ParseResult<String> {
+    let ident = pmany(pany(&[
         'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r',
         's', 't', 'u', 'v', 'w', 'x', 'y', 'z',
-    ])
+    ]));
+    pmap(ident, |ident| {
+        let string: String = ident.into_iter().map(|c| c.value).collect();
+        string
+    })
 }
 
 fn pws<'a>() -> impl Fn(ContinuationState<'a>) -> ParseResult<'a, Vec<Token<char>>> {
     pmany(pany(&[' ', '\n', '\t', '\r']))
 }
 
-fn param_binding<'a>() -> impl Fn(ContinuationState<'a>) -> ParseResult<(Token<char>, Token<char>)>
-{
+fn param_binding<'a>(
+) -> impl Fn(ContinuationState<'a>) -> ParseResult<(Token<String>, Token<String>)> {
     let param_binding = pleft(pthen(pidentifier(), pws()));
     let param_binding = pleft(pthen(param_binding, pchar(':')));
     let param_binding = pleft(pthen(param_binding, pws()));
