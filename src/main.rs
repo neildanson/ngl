@@ -1,5 +1,3 @@
-mod parser_combinator;
-
 use ngl::parser_combinator::*;
 
 #[derive(Debug, Clone)]
@@ -47,22 +45,25 @@ fn main() {
         fun_binding,
         psepby(param_binding(), pthen(pchar(','), pws())),
     );
+
     let fun_binding = pleft(pthen(fun_binding, pws()));
     let fun_binding = pleft(pthen(fun_binding, pchar(')')));
     let fun_binding = pleft(pthen(fun_binding, pws()));
     let fun_binding = pleft(pthen(fun_binding, pchar('{')));
     let fun_binding = pleft(pthen(fun_binding, pws()));
-    let fun_binding = pthen(fun_binding, pmany(let_binding));
+    /*let fun_binding = pthen(fun_binding, pmany(let_binding));
     let fun_binding = pleft(pthen(fun_binding, pws()));
-    let fun_binding = pleft(pthen(fun_binding, pchar('}')));
+    let fun_binding = pleft(pthen(fun_binding, pchar('}')));*/
 
     let result = fun_binding.parse(
         "fun name(param: type, paramx: typex) {
-            let x = 1; 
-            let y = 2;   
+            let x = 1;
+            let y = 2;
         }"
         .into(),
     );
+
+    //let result = let_binding.parse("let x = true;".into());
 
     println!("{:?}", result);
 }
