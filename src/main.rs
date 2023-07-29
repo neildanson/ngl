@@ -37,7 +37,7 @@ fn main() {
     let let_binding = pleft(pthen(let_binding, pws()));
 
     let fun_binding = pleft(pthen(pstring("fun"), pws()));
-    let fun_binding = pright(pthen(fun_binding, pidentifier()));
+    /*let fun_binding = pright(pthen(fun_binding, pidentifier()));
     let fun_binding = pleft(pthen(fun_binding, pws()));
     let fun_binding = pleft(pthen(fun_binding, pchar('(')));
     let fun_binding = pleft(pthen(fun_binding, pws()));
@@ -51,7 +51,7 @@ fn main() {
     let fun_binding = pleft(pthen(fun_binding, pws()));
     let fun_binding = pleft(pthen(fun_binding, pchar('{')));
     let fun_binding = pleft(pthen(fun_binding, pws()));
-    /*let fun_binding = pthen(fun_binding, pmany(let_binding));
+    let fun_binding = pthen(fun_binding, pmany(let_binding));
     let fun_binding = pleft(pthen(fun_binding, pws()));
     let fun_binding = pleft(pthen(fun_binding, pchar('}')));*/
 
@@ -68,7 +68,7 @@ fn main() {
     println!("{:?}", result);
 }
 
-fn pidentifier<'a>() -> impl Parser<'a, String> {
+fn pidentifier<'a>() -> impl Parser<'a, Output = String> {
     let ident = pmany(pany(&[
         'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r',
         's', 't', 'u', 'v', 'w', 'x', 'y', 'z',
@@ -79,11 +79,11 @@ fn pidentifier<'a>() -> impl Parser<'a, String> {
     })
 }
 
-fn pws<'a>() -> impl Parser<'a, Vec<Token<char>>> {
+fn pws<'a>() -> impl Parser<'a, Output = Vec<Token<char>>> {
     pmany(pany(&[' ', '\n', '\t', '\r']))
 }
 
-fn param_binding<'a>() -> impl Parser<'a, (Token<String>, Token<String>)> {
+fn param_binding<'a>() -> impl Parser<'a, Output = (Token<String>, Token<String>)> {
     let param_binding = pleft(pthen(pidentifier(), pws()));
     let param_binding = pleft(pthen(param_binding, pchar(':')));
     let param_binding = pleft(pthen(param_binding, pws()));

@@ -5,8 +5,9 @@ use crate::{
 
 pub type ParseResult<'a, Output> = Result<(Token<Output>, ContinuationState<'a>), Error>;
 
-pub trait Parser<'a, Output>: Clone {
-    fn parse(&self, input: ContinuationState<'a>) -> ParseResult<'a, Output>;
+pub trait Parser<'a>: Clone {
+    type Output;
+    fn parse(&self, input: ContinuationState<'a>) -> ParseResult<'a, Self::Output>;
 }
 
 #[derive(Debug, Clone)]
@@ -32,11 +33,12 @@ where
     }
 }
 
-impl<'a, Output, F, C: Clone> Parser<'a, Output> for ClosureParser<'a, Output, F, C>
+impl<'a, Output, F, C: Clone> Parser<'a> for ClosureParser<'a, Output, F, C>
 where
     F: Fn(ContinuationState<'a>, C) -> ParseResult<'a, Output> + Clone,
     Output: Clone,
 {
+    type Output = Output;
     fn parse(&self, input: ContinuationState<'a>) -> ParseResult<'a, Output> {
         (self.parser)(input, self.captures.clone())
     }
@@ -99,8 +101,8 @@ fn pstring_impl<'a>(value: &'a str, input: ContinuationState<'a>) -> ParseResult
 }
 
 fn pthen_impl<'a, T, U>(
-    parser1: impl Parser<'a, T>,
-    parser2: impl Parser<'a, U>,
+    parser1: impl Parser<'a, Output = T>,
+    parser2: impl Parser<'a, Output = U>,
     input: ContinuationState<'a>,
 ) -> ParseResult<'a, (Token<T>, Token<U>)> {
     let result1 = parser1.parse(input);
@@ -116,8 +118,8 @@ fn pthen_impl<'a, T, U>(
 }
 
 pub fn por_impl<'a, T>(
-    parser1: impl Parser<'a, T>,
-    parser2: impl Parser<'a, T>,
+    parser1: impl Parser<'a, Output = T>,
+    parser2: impl Parser<'a, Output = T>,
     input: ContinuationState<'a>,
 ) -> ParseResult<'a, T> {
     let result1 = parser1.parse(input);
@@ -140,7 +142,7 @@ pub fn por_impl<'a, T>(
 }
 
 fn poptional_impl<'a, T>(
-    parser: impl Parser<'a, T>,
+    parser: impl Parser<'a, Output = T>,
     input: ContinuationState<'a>,
 ) -> ParseResult<'a, Option<T>> {
     let result1 = parser.parse(input);
@@ -154,7 +156,7 @@ fn poptional_impl<'a, T>(
 }
 
 fn pmap_impl<'a, T, U, F>(
-    parser: impl Parser<'a, T>,
+    parser: impl Parser<'a, Output = T>,
     f: F,
     input: ContinuationState<'a>,
 ) -> ParseResult<'a, U>
@@ -170,47 +172,43 @@ where
     })
 }
 
-fn pany_impl<'a>(
-    valid_chars: &'a [char],
-) -> impl Fn(ContinuationState<'a>) -> ParseResult<'a, char> {
-    move |input| {
-        for c in valid_chars.iter() {
-            let result = pchar_impl(*c, input);
-            match result {
-                Ok((token, state)) => return Ok((token, state)),
-                Err(_) => continue,
-            }
+fn pany_impl<'a>(valid_chars: &'a [char], input: ContinuationState<'a>) -> ParseResult<'a, char> {
+    for c in valid_chars.iter() {
+        let result = pchar_impl(*c, input);
+        match result {
+            Ok((token, state)) => return Ok((token, state)),
+            Err(_) => continue,
         }
-
-        let valid_chars_length = valid_chars.len();
-        let error = if valid_chars_length >= 2 {
-            let first = valid_chars
-                .iter()
-                .take(valid_chars.len() - 1)
-                .map(|x| x.to_string())
-                .collect::<Vec<_>>()
-                .join(", ");
-            first + " or " + &valid_chars.last().unwrap().to_string()
-        } else if valid_chars_length == 1 {
-            valid_chars.iter().next().unwrap().to_string()
-        } else {
-            "".to_string() //TODO - this should never happen
-        };
-
-        let actual = input.remaining.chars().next().unwrap_or(' ').to_string();
-
-        Err(Error::new(
-            error,
-            actual,
-            input.position,
-            input.line_number,
-            input.line_position,
-        ))
     }
+
+    let valid_chars_length = valid_chars.len();
+    let error = if valid_chars_length >= 2 {
+        let first = valid_chars
+            .iter()
+            .take(valid_chars.len() - 1)
+            .map(|x| x.to_string())
+            .collect::<Vec<_>>()
+            .join(", ");
+        first + " or " + &valid_chars.last().unwrap().to_string()
+    } else if valid_chars_length == 1 {
+        valid_chars.iter().next().unwrap().to_string()
+    } else {
+        "".to_string() //TODO - this should never happen
+    };
+
+    let actual = input.remaining.chars().next().unwrap_or(' ').to_string();
+
+    Err(Error::new(
+        error,
+        actual,
+        input.position,
+        input.line_number,
+        input.line_position,
+    ))
 }
 
 fn pmany_impl<'a, T>(
-    parser: impl Parser<'a, T>,
+    parser: impl Parser<'a, Output = T>,
     input: ContinuationState<'a>,
 ) -> ParseResult<'a, Vec<Token<T>>> {
     let mut results = Vec::new();
@@ -233,12 +231,12 @@ fn pmany_impl<'a, T>(
     let len = results.len();
     match error {
         Some(_) => Ok((Token::new(results, input.position, len), cont)),
-        None => Ok((Token::new(results, 0, len), input)),
+        None => Ok((Token::new(results, input.position, len), input)),
     }
 }
 
 fn pleft_impl<'a, T, U>(
-    parser: impl Parser<'a, (Token<T>, Token<U>)>,
+    parser: impl Parser<'a, Output = (Token<T>, Token<U>)>,
     input: ContinuationState<'a>,
 ) -> ParseResult<'a, T> {
     let result = parser.parse(input);
@@ -249,7 +247,7 @@ fn pleft_impl<'a, T, U>(
 }
 
 fn pright_impl<'a, T, U>(
-    parser: impl Parser<'a, (Token<T>, Token<U>)>,
+    parser: impl Parser<'a, Output = (Token<T>, Token<U>)>,
     input: ContinuationState<'a>,
 ) -> ParseResult<'a, U> {
     let result = parser.parse(input);
@@ -260,7 +258,7 @@ fn pright_impl<'a, T, U>(
 }
 
 fn p1_impl<'a, T>(
-    parser: impl Parser<'a, Vec<Token<T>>>,
+    parser: impl Parser<'a, Output = Vec<Token<T>>>,
     input: ContinuationState<'a>,
 ) -> ParseResult<'a, Vec<Token<T>>> {
     let result = parser.parse(input);
@@ -283,56 +281,51 @@ fn p1_impl<'a, T>(
 }
 
 //TODO - can I make these using a macro????
-pub fn pchar<'a>(value: char) -> impl Parser<'a, char> {
+pub fn pchar<'a>(value: char) -> impl Parser<'a, Output = char> {
     ClosureParser::new(move |input, value| pchar_impl(value, input), value)
 }
 
-pub fn pstring<'a>(value: &'a str) -> impl Parser<'a, &'a str> {
+pub fn pstring<'a>(value: &'a str) -> impl Parser<'a, Output = &'a str> {
     ClosureParser::new(move |input, value| pstring_impl(value, input), value)
 }
 
-pub fn pthen<'a, T: Clone, U: Clone>(
-    parser1: impl Parser<'a, T>,
-    parser2: impl Parser<'a, U>,
-) -> impl Parser<'a, (Token<T>, Token<U>)>
-where
-    T: 'a,
-    U: 'a,
-{
+pub fn pthen<'a, T: Clone + 'a, U: Clone + 'a>(
+    parser1: impl Parser<'a, Output = T>,
+    parser2: impl Parser<'a, Output = U>,
+) -> impl Parser<'a, Output = (Token<T>, Token<U>)> {
     ClosureParser::new(
         move |input, (parser1, parser2)| pthen_impl(parser1, parser2, input),
         (parser1, parser2),
     )
 }
 
-pub fn por<'a, T: Clone>(
-    parser1: impl Parser<'a, T>,
-    parser2: impl Parser<'a, T>,
-) -> impl Parser<'a, T>
-where
-    T: 'a,
-{
+pub fn por<'a, T: Clone + 'a>(
+    parser1: impl Parser<'a, Output = T>,
+    parser2: impl Parser<'a, Output = T>,
+) -> impl Parser<'a, Output = T> {
     ClosureParser::new(
         move |input, (parser1, parser2)| por_impl(parser1, parser2, input),
         (parser1, parser2),
     )
 }
 
-pub fn poptional<'a, T: Clone>(parser: impl Parser<'a, T>) -> impl Parser<'a, Option<T>>
-where
-    T: 'a,
-{
+pub fn poptional<'a, T: Clone + 'a>(
+    parser: impl Parser<'a, Output = T>,
+) -> impl Parser<'a, Output = Option<T>> {
     ClosureParser::new(move |input, parser| poptional_impl(parser, input), parser)
 }
 
-pub fn pany<'a>(valid_chars: &'a [char]) -> impl Parser<'a, char> {
+pub fn pany<'a>(valid_chars: &'a [char]) -> impl Parser<'a, Output = char> {
     ClosureParser::new(
-        move |input, valid_chars| pany_impl(valid_chars)(input),
+        move |input, valid_chars| pany_impl(valid_chars, input),
         valid_chars,
     )
 }
 
-pub fn pmap<'a, T: Clone, U: Clone + 'a, F>(parser: impl Parser<'a, T>, f: F) -> impl Parser<'a, U>
+pub fn pmap<'a, T: Clone, U: Clone + 'a, F>(
+    parser: impl Parser<'a, Output = T>,
+    f: F,
+) -> impl Parser<'a, Output = U>
 where
     F: Fn(T) -> U,
     F: Clone,
@@ -343,62 +336,44 @@ where
     )
 }
 
-pub fn pmany<'a, T: Clone>(parser: impl Parser<'a, T>) -> impl Parser<'a, Vec<Token<T>>>
-where
-    T: 'a,
-{
+pub fn pmany<'a, T: Clone + 'a>(
+    parser: impl Parser<'a, Output = T>,
+) -> impl Parser<'a, Output = Vec<Token<T>>> {
     ClosureParser::new(move |input, parser| pmany_impl(parser, input), parser)
 }
 
-pub fn pleft<'a, T: Clone, U: Clone>(
-    parser: impl Parser<'a, (Token<T>, Token<U>)>,
-) -> impl Parser<'a, T>
-where
-    T: 'a,
-    U: 'a,
-{
+pub fn pleft<'a, T: Clone + 'a, U: Clone + 'a>(
+    parser: impl Parser<'a, Output = (Token<T>, Token<U>)>,
+) -> impl Parser<'a, Output = T> {
     ClosureParser::new(move |input, parser| pleft_impl(parser, input), parser)
 }
 
-pub fn pright<'a, T: Clone, U: Clone>(
-    parser: impl Parser<'a, (Token<T>, Token<U>)>,
-) -> impl Parser<'a, U>
-where
-    T: 'a,
-    U: 'a,
-{
+pub fn pright<'a, T: Clone + 'a, U: Clone + 'a>(
+    parser: impl Parser<'a, Output = (Token<T>, Token<U>)>,
+) -> impl Parser<'a, Output = U> {
     ClosureParser::new(move |input, parser| pright_impl(parser, input), parser)
 }
 
-pub fn pbetween<'a, T: Clone, U: Clone, V: Clone>(
-    parser1: impl Parser<'a, T>,
-    parser2: impl Parser<'a, U>,
-    parser3: impl Parser<'a, V>,
-) -> impl Parser<'a, U>
-where
-    T: 'a,
-    U: 'a,
-    V: 'a,
-{
+pub fn pbetween<'a, T: Clone + 'a, U: Clone + 'a, V: Clone + 'a>(
+    parser1: impl Parser<'a, Output = T>,
+    parser2: impl Parser<'a, Output = U>,
+    parser3: impl Parser<'a, Output = V>,
+) -> impl Parser<'a, Output = U> {
     let parser = pthen(parser1, pthen(parser2, parser3));
     let parser = pright(parser); //Skip T
     pleft(parser) //Ignore U
 }
 
 pub fn p1<'a, T: Clone + 'a>(
-    parser: impl Parser<'a, Vec<Token<T>>>,
-) -> impl Parser<'a, Vec<Token<T>>> {
+    parser: impl Parser<'a, Output = Vec<Token<T>>>,
+) -> impl Parser<'a, Output = Vec<Token<T>>> {
     ClosureParser::new(move |input, parser| p1_impl(parser, input), parser)
 }
 
-pub fn psepby<'a, T: Clone, U: Clone>(
-    parser: impl Parser<'a, T>,
-    separator: impl Parser<'a, U>,
-) -> impl Parser<'a, Vec<Token<T>>>
-where
-    T: 'a,
-    U: 'a,
-{
+pub fn psepby<'a, T: Clone + 'a, U: Clone + 'a>(
+    parser: impl Parser<'a, Output = T>,
+    separator: impl Parser<'a, Output = U>,
+) -> impl Parser<'a, Output = Vec<Token<T>>> {
     let parser_combined = pleft(pthen(parser.clone(), separator));
     let parser_many = pmany(parser_combined);
     let parser_many_then = pthen(parser_many, parser);
@@ -409,10 +384,9 @@ where
     parser
 }
 
-pub fn pmany1<'a, T: Clone>(parser: impl Parser<'a, T>) -> impl Parser<'a, Vec<Token<T>>>
-where
-    T: 'a,
-{
+pub fn pmany1<'a, T: Clone + 'a>(
+    parser: impl Parser<'a, Output = T>,
+) -> impl Parser<'a, Output = Vec<Token<T>>> {
     p1(pmany(parser))
 }
 
