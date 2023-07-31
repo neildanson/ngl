@@ -1,12 +1,6 @@
 mod parser_combinator;
 
-use ngl::parser_combinator::*;
-
-#[derive(Debug)]
-enum Value {
-    Number(i32),
-    Bool(bool),
-}
+use ngl::{parser_combinator::*, untyped_language::*};
 
 fn main() {
     let any_number = pany(&['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']);
@@ -43,15 +37,21 @@ fn main() {
     let fun_binding = pleft(pthen(fun_binding, pws()));
     let fun_binding = pleft(pthen(fun_binding, pchar('(')));
     let fun_binding = pleft(pthen(fun_binding, pws()));
+
     let fun_binding = pthen(fun_binding, psepby(param_binding, pthen(pchar(','), pws())));
     let fun_binding = pleft(pthen(fun_binding, pws()));
     let fun_binding = pleft(pthen(fun_binding, pchar(')')));
     let fun_binding = pleft(pthen(fun_binding, pws()));
     let fun_binding = pleft(pthen(fun_binding, pchar('{')));
     let fun_binding = pleft(pthen(fun_binding, pws()));
-    let fun_binding = pthen(fun_binding, pmany(let_binding));
-    let fun_binding = pleft(pthen(fun_binding, pws()));
-    let fun_binding = pleft(pthen(fun_binding, pchar('}')));
+    //let fun_binding = pthen(fun_binding, pmany(let_binding));
+    //let fun_binding = pleft(pthen(fun_binding, pws()));
+    //let fun_binding = pleft(pthen(fun_binding, pchar('}')));
+
+    let fun_binding = pmap(fun_binding, |(name, params)| Fun {
+        name: name,
+        params: params.value,
+    });
 
     let result = fun_binding(
         "fun name(param: type, paramx: typex) {
@@ -61,7 +61,7 @@ fn main() {
         .into(),
     );
 
-    println!("{:?}", result);
+    println!("{:#?}", result);
 }
 
 fn pidentifier<'a>() -> impl Fn(ContinuationState<'a>) -> ParseResult<String> {
@@ -79,12 +79,13 @@ fn pws<'a>() -> impl Fn(ContinuationState<'a>) -> ParseResult<'a, Vec<Token<char
     pmany(pany(&[' ', '\n', '\t', '\r']))
 }
 
-fn param_binding<'a>(
-) -> impl Fn(ContinuationState<'a>) -> ParseResult<(Token<String>, Token<String>)> {
+fn param_binding<'a>() -> impl Fn(ContinuationState<'a>) -> ParseResult<Parameter> {
     let param_binding = pleft(pthen(pidentifier(), pws()));
     let param_binding = pleft(pthen(param_binding, pchar(':')));
     let param_binding = pleft(pthen(param_binding, pws()));
     let param_binding = pthen(param_binding, pidentifier());
     let param_binding = pleft(pthen(param_binding, pws()));
-    param_binding
+    pmap(param_binding, |(name, type_)| {
+        Parameter(name.value, type_.value)
+    })
 }
