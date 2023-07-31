@@ -74,8 +74,7 @@ fn pstring_impl<'a>(value: &'a str, input: ContinuationState<'a>) -> ParseResult
     let mut error = None;
     let mut success = Vec::new();
     for t in value.chars() {
-        let parser = pchar(t);
-        let result = parser.parse(cont);
+        let result = pchar_impl(t, cont);
         match result {
             Ok((_, new_cont)) => {
                 success.push(t);
