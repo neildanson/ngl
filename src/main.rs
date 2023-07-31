@@ -1,8 +1,6 @@
-mod parser_combinator;
-
 use ngl::parser_combinator::*;
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 enum Value {
     Number(i32),
     Bool(bool),
@@ -43,7 +41,11 @@ fn main() {
     let fun_binding = pleft(pthen(fun_binding, pws()));
     let fun_binding = pleft(pthen(fun_binding, pchar('(')));
     let fun_binding = pleft(pthen(fun_binding, pws()));
-    let fun_binding = pthen(fun_binding, psepby(param_binding, pthen(pchar(','), pws())));
+    let fun_binding = pthen(
+        fun_binding,
+        psepby(param_binding(), pthen(pchar(','), pws())),
+    );
+
     let fun_binding = pleft(pthen(fun_binding, pws()));
     let fun_binding = pleft(pthen(fun_binding, pchar(')')));
     let fun_binding = pleft(pthen(fun_binding, pws()));
@@ -53,18 +55,20 @@ fn main() {
     let fun_binding = pleft(pthen(fun_binding, pws()));
     let fun_binding = pleft(pthen(fun_binding, pchar('}')));
 
-    let result = fun_binding(
+    let result = fun_binding.parse(
         "fun name(param: type, paramx: typex) {
-            let x = 1; 
-            let y = 2;   
+            let x = 1;
+            let y = 2;
         }"
         .into(),
     );
 
+    //let result = let_binding.parse("let x = true;".into());
+
     println!("{:?}", result);
 }
 
-fn pidentifier<'a>() -> impl Fn(ContinuationState<'a>) -> ParseResult<String> {
+fn pidentifier<'a>() -> impl Parser<'a, Output = String> {
     let ident = pmany(pany(&[
         'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r',
         's', 't', 'u', 'v', 'w', 'x', 'y', 'z',
@@ -75,12 +79,11 @@ fn pidentifier<'a>() -> impl Fn(ContinuationState<'a>) -> ParseResult<String> {
     })
 }
 
-fn pws<'a>() -> impl Fn(ContinuationState<'a>) -> ParseResult<'a, Vec<Token<char>>> {
+fn pws<'a>() -> impl Parser<'a, Output = Vec<Token<char>>> {
     pmany(pany(&[' ', '\n', '\t', '\r']))
 }
 
-fn param_binding<'a>(
-) -> impl Fn(ContinuationState<'a>) -> ParseResult<(Token<String>, Token<String>)> {
+fn param_binding<'a>() -> impl Parser<'a, Output = (Token<String>, Token<String>)> {
     let param_binding = pleft(pthen(pidentifier(), pws()));
     let param_binding = pleft(pthen(param_binding, pchar(':')));
     let param_binding = pleft(pthen(param_binding, pws()));
