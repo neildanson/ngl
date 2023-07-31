@@ -1,6 +1,6 @@
 use ngl::parser_combinator::*;
 
-#[derive(Debug, Clone)]
+#[derive(Clone, Debug)]
 enum Value {
     Number(i32),
     Bool(bool),
@@ -37,7 +37,7 @@ fn main() {
     let let_binding = pleft(pthen(let_binding, pws()));
 
     let fun_binding = pleft(pthen(pstring("fun"), pws()));
-    /*let fun_binding = pright(pthen(fun_binding, pidentifier()));
+    let fun_binding = pright(pthen(fun_binding, pidentifier()));
     let fun_binding = pleft(pthen(fun_binding, pws()));
     let fun_binding = pleft(pthen(fun_binding, pchar('(')));
     let fun_binding = pleft(pthen(fun_binding, pws()));
@@ -53,7 +53,7 @@ fn main() {
     let fun_binding = pleft(pthen(fun_binding, pws()));
     let fun_binding = pthen(fun_binding, pmany(let_binding));
     let fun_binding = pleft(pthen(fun_binding, pws()));
-    let fun_binding = pleft(pthen(fun_binding, pchar('}')));*/
+    let fun_binding = pleft(pthen(fun_binding, pchar('}')));
 
     let result = fun_binding.parse(
         "fun name(param: type, paramx: typex) {

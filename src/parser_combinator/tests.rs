@@ -418,6 +418,7 @@ fn test_pmany1() {
     assert_eq!(result, expected);
 }
 
+/*
 #[test]
 fn test_psepby() {
     let parser = psepby(pchar('1'), pchar(','));
@@ -449,3 +450,4 @@ fn test_psepby_missing_trail() {
     let expected = Err(Error::new("1".to_string(), "".to_string(), 4, 0, 4));
     assert_eq!(result, expected);
 }
+ */

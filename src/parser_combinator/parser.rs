@@ -10,37 +10,34 @@ pub trait Parser<'a>: Clone {
     fn parse(&self, input: ContinuationState<'a>) -> ParseResult<'a, Self::Output>;
 }
 
-#[derive(Debug, Clone)]
-struct ClosureParser<'a, Output, F, C>
+#[derive(Clone)]
+struct ClosureParser<'a, Output, F>
 where
-    F: Fn(ContinuationState<'a>, C) -> ParseResult<'a, Output>,
+    F: Fn(ContinuationState<'a>) -> ParseResult<'a, Output>,
 {
     parser: F,
-    captures: C,
     _phantom: std::marker::PhantomData<&'a Output>,
 }
 
-impl<'a, Output, F, C: Clone> ClosureParser<'a, Output, F, C>
+impl<'a, Output, F> ClosureParser<'a, Output, F>
 where
-    F: Fn(ContinuationState<'a>, C) -> ParseResult<'a, Output>,
+    F: Fn(ContinuationState<'a>) -> ParseResult<'a, Output>,
 {
-    pub fn new(parser: F, captures: C) -> Self {
+    pub fn new(parser: F) -> Self {
         ClosureParser {
             parser,
-            captures,
             _phantom: std::marker::PhantomData,
         }
     }
 }
 
-impl<'a, Output, F, C: Clone> Parser<'a> for ClosureParser<'a, Output, F, C>
+impl<'a, Output: Clone, F> Parser<'a> for ClosureParser<'a, Output, F>
 where
-    F: Fn(ContinuationState<'a>, C) -> ParseResult<'a, Output> + Clone,
-    Output: Clone,
+    F: Fn(ContinuationState<'a>) -> ParseResult<'a, Output> + Clone,
 {
     type Output = Output;
     fn parse(&self, input: ContinuationState<'a>) -> ParseResult<'a, Output> {
-        (self.parser)(input, self.captures.clone())
+        (self.parser)(input)
     }
 }
 
@@ -281,82 +278,70 @@ fn p1_impl<'a, T>(
 
 //TODO - can I make these using a macro????
 pub fn pchar<'a>(value: char) -> impl Parser<'a, Output = char> {
-    ClosureParser::new(move |input, value| pchar_impl(value, input), value)
+    ClosureParser::new(move |input| pchar_impl(value, input))
 }
 
 pub fn pstring<'a>(value: &'a str) -> impl Parser<'a, Output = &'a str> {
-    ClosureParser::new(move |input, value| pstring_impl(value, input), value)
+    ClosureParser::new(move |input| pstring_impl(value, input))
 }
 
 pub fn pthen<'a, T: Clone + 'a, U: Clone + 'a>(
-    parser1: impl Parser<'a, Output = T>,
-    parser2: impl Parser<'a, Output = U>,
+    parser1: impl Parser<'a, Output = T> + 'a,
+    parser2: impl Parser<'a, Output = U> + 'a,
 ) -> impl Parser<'a, Output = (Token<T>, Token<U>)> {
-    ClosureParser::new(
-        move |input, (parser1, parser2)| pthen_impl(parser1, parser2, input),
-        (parser1, parser2),
-    )
+    ClosureParser::new(move |input| pthen_impl(parser1.clone(), parser2.clone(), input))
 }
 
 pub fn por<'a, T: Clone + 'a>(
-    parser1: impl Parser<'a, Output = T>,
-    parser2: impl Parser<'a, Output = T>,
+    parser1: impl Parser<'a, Output = T> + 'a,
+    parser2: impl Parser<'a, Output = T> + 'a,
 ) -> impl Parser<'a, Output = T> {
-    ClosureParser::new(
-        move |input, (parser1, parser2)| por_impl(parser1, parser2, input),
-        (parser1, parser2),
-    )
+    ClosureParser::new(move |input| por_impl(parser1.clone(), parser2.clone(), input))
 }
 
 pub fn poptional<'a, T: Clone + 'a>(
-    parser: impl Parser<'a, Output = T>,
+    parser: impl Parser<'a, Output = T> + 'a,
 ) -> impl Parser<'a, Output = Option<T>> {
-    ClosureParser::new(move |input, parser| poptional_impl(parser, input), parser)
+    ClosureParser::new(move |input| poptional_impl(parser.clone(), input))
 }
 
 pub fn pany<'a>(valid_chars: &'a [char]) -> impl Parser<'a, Output = char> {
-    ClosureParser::new(
-        move |input, valid_chars| pany_impl(valid_chars, input),
-        valid_chars,
-    )
+    ClosureParser::new(move |input| pany_impl(valid_chars, input))
 }
 
-pub fn pmap<'a, T: Clone, U: Clone + 'a, F>(
-    parser: impl Parser<'a, Output = T>,
+pub fn pmap<'a, T: 'a, U: Clone + 'a, F>(
+    parser: impl Parser<'a, Output = T> + 'a,
     f: F,
 ) -> impl Parser<'a, Output = U>
 where
     F: Fn(T) -> U,
-    F: Clone,
+    F: Clone + 'a,
 {
-    ClosureParser::new(
-        move |input, (f, parser)| pmap_impl(parser, f, input),
-        (f, parser),
-    )
+    ClosureParser::new(move |input| pmap_impl(parser.clone(), f.clone(), input))
 }
 
 pub fn pmany<'a, T: Clone + 'a>(
-    parser: impl Parser<'a, Output = T>,
+    parser: impl Parser<'a, Output = T> + 'a,
 ) -> impl Parser<'a, Output = Vec<Token<T>>> {
-    ClosureParser::new(move |input, parser| pmany_impl(parser, input), parser)
+    ClosureParser::new(move |input| pmany_impl(parser.clone(), input))
 }
 
 pub fn pleft<'a, T: Clone + 'a, U: Clone + 'a>(
-    parser: impl Parser<'a, Output = (Token<T>, Token<U>)>,
+    parser: impl Parser<'a, Output = (Token<T>, Token<U>)> + 'a,
 ) -> impl Parser<'a, Output = T> {
-    ClosureParser::new(move |input, parser| pleft_impl(parser, input), parser)
+    ClosureParser::new(move |input| pleft_impl(parser.clone(), input))
 }
 
 pub fn pright<'a, T: Clone + 'a, U: Clone + 'a>(
-    parser: impl Parser<'a, Output = (Token<T>, Token<U>)>,
+    parser: impl Parser<'a, Output = (Token<T>, Token<U>)> + 'a,
 ) -> impl Parser<'a, Output = U> {
-    ClosureParser::new(move |input, parser| pright_impl(parser, input), parser)
+    ClosureParser::new(move |input| pright_impl(parser.clone(), input))
 }
 
 pub fn pbetween<'a, T: Clone + 'a, U: Clone + 'a, V: Clone + 'a>(
-    parser1: impl Parser<'a, Output = T>,
-    parser2: impl Parser<'a, Output = U>,
-    parser3: impl Parser<'a, Output = V>,
+    parser1: impl Parser<'a, Output = T> + 'a,
+    parser2: impl Parser<'a, Output = U> + 'a,
+    parser3: impl Parser<'a, Output = V> + 'a,
 ) -> impl Parser<'a, Output = U> {
     let parser = pthen(parser1, pthen(parser2, parser3));
     let parser = pright(parser); //Skip T
@@ -364,14 +349,14 @@ pub fn pbetween<'a, T: Clone + 'a, U: Clone + 'a, V: Clone + 'a>(
 }
 
 pub fn p1<'a, T: Clone + 'a>(
-    parser: impl Parser<'a, Output = Vec<Token<T>>>,
+    parser: impl Parser<'a, Output = Vec<Token<T>>> + 'a,
 ) -> impl Parser<'a, Output = Vec<Token<T>>> {
-    ClosureParser::new(move |input, parser| p1_impl(parser, input), parser)
+    ClosureParser::new(move |input| p1_impl(parser.clone(), input))
 }
 
 pub fn psepby<'a, T: Clone + 'a, U: Clone + 'a>(
-    parser: impl Parser<'a, Output = T>,
-    separator: impl Parser<'a, Output = U>,
+    parser: impl Parser<'a, Output = T> + 'a,
+    separator: impl Parser<'a, Output = U> + 'a,
 ) -> impl Parser<'a, Output = Vec<Token<T>>> {
     let parser_combined = pleft(pthen(parser.clone(), separator));
     let parser_many = pmany(parser_combined);
@@ -384,7 +369,7 @@ pub fn psepby<'a, T: Clone + 'a, U: Clone + 'a>(
 }
 
 pub fn pmany1<'a, T: Clone + 'a>(
-    parser: impl Parser<'a, Output = T>,
+    parser: impl Parser<'a, Output = T> + 'a,
 ) -> impl Parser<'a, Output = Vec<Token<T>>> {
     p1(pmany(parser))
 }
