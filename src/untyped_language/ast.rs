@@ -1,6 +1,6 @@
 use crate::parser_combinator::Token;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Value {
     Number(i32),
     Bool(bool),

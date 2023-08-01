@@ -1,10 +1,8 @@
-use std::process::Output;
-
 use crate::parser_combinator::*;
 
 use super::*;
 
-fn pint<'a>() -> impl Parser<'a, Output = Value> {
+pub(crate) fn pint<'a>() -> impl Parser<'a, Output = Value> {
     let any_number = pany(&['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']);
     let many_numbers = pmany1(any_number);
     let number_parser = pthen(poptional(pchar('-')), many_numbers);
@@ -44,7 +42,7 @@ pub fn pws<'a>() -> impl Parser<'a, Output = Vec<Token<char>>> {
     pmany(pany(&[' ', '\n', '\t', '\r']))
 }
 
-pub fn param_binding<'a>() -> impl Parser<'a, Output = Parameter> {
+pub fn pparam<'a>() -> impl Parser<'a, Output = Parameter> {
     let param_binding = pleft(pthen(pidentifier(), pws()));
     let param_binding = pleft(pthen(param_binding, pchar(':')));
     let param_binding = pleft(pthen(param_binding, pws()));
@@ -55,7 +53,7 @@ pub fn param_binding<'a>() -> impl Parser<'a, Output = Parameter> {
     })
 }
 
-pub fn let_binding<'a>() -> impl Parser<'a, Output = ()> {
+pub fn plet<'a>() -> impl Parser<'a, Output = ()> {
     let let_binding = pleft(pthen(pstring("let"), pws()));
     let let_binding = pright(pthen(let_binding, pidentifier()));
     let let_binding = pleft(pthen(let_binding, pws()));
@@ -74,10 +72,7 @@ pub fn pfun<'a>() -> impl Parser<'a, Output = Fun> {
     let fun_binding = pleft(pthen(fun_binding, pws()));
     let fun_binding = pleft(pthen(fun_binding, pchar('(')));
     let fun_binding = pleft(pthen(fun_binding, pws()));
-    let fun_binding = pthen(
-        fun_binding,
-        psepby(param_binding(), pthen(pchar(','), pws())),
-    );
+    let fun_binding = pthen(fun_binding, psepby(pparam(), pthen(pchar(','), pws())));
 
     let fun_binding = pleft(pthen(fun_binding, pws()));
     let fun_binding = pleft(pthen(fun_binding, pchar(')')));
