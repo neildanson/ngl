@@ -5,12 +5,12 @@ use criterion::{black_box, criterion_group, criterion_main, Criterion};
 use ngl::parser_combinator::*;
 
 fn parse_char_success(c: &mut Criterion) {
-    let truthy_parser = por(pchar('t'), pchar('f'));
+    let truthy_parser = pchar('t');
 
     c.bench_function("Parse Char Success", |b| {
         b.iter(|| {
             for _ in 0..100 {
-                let _ = black_box(truthy_parser("t".into()));
+                let _ = black_box(truthy_parser.parse("t".into()));
             }
         })
     });
@@ -22,7 +22,7 @@ fn parse_char_fail(c: &mut Criterion) {
     c.bench_function("Parse Char Fail", |b| {
         b.iter(|| {
             for _ in 0..100 {
-                let _ = black_box(truthy_parser("x".into()));
+                let _ = black_box(truthy_parser.parse("x".into()));
             }
         })
     });
@@ -33,7 +33,7 @@ fn parse_string_success(c: &mut Criterion) {
     c.bench_function("Parse String Success", |b| {
         b.iter(|| {
             for _ in 0..100 {
-                let _ = black_box(truthy_parser("true".into()));
+                let _ = black_box(truthy_parser.parse("true".into()));
             }
         })
     });
@@ -45,7 +45,7 @@ fn parse_string_fail(c: &mut Criterion) {
     c.bench_function("Parse String Fail", |b| {
         b.iter(|| {
             for _ in 0..100 {
-                let _ = black_box(truthy_parser("wrong".into()));
+                let _ = black_box(truthy_parser.parse("wrong".into()));
             }
         })
     });
@@ -68,7 +68,7 @@ fn parse_int_success(c: &mut Criterion) {
     c.bench_function("Parse int Success", |b| {
         b.iter(|| {
             for _ in 0..100 {
-                let _ = black_box(to_number("-123456789".into()));
+                let _ = black_box(to_number.parse("-123456789".into()));
             }
         })
     });
