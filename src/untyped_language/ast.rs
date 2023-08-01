@@ -6,7 +6,7 @@ pub enum Value {
     Bool(bool),
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Parameter(pub String, pub String); //name, type
 
 #[derive(Debug, Clone)]

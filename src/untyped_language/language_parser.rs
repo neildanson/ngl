@@ -53,6 +53,16 @@ pub fn pparam<'a>() -> impl Parser<'a, Output = Parameter> {
     })
 }
 
+pub fn pparams<'a>() -> impl Parser<'a, Output = Vec<Token<Parameter>>> {
+    let lparen = pleft(pthen(pchar('('), pws()));
+    let rparen = pleft(pthen(pchar(')'), pws()));
+    let comma = pleft(pthen(pchar(','), pws()));
+
+    let param_list = psepby(pparam(), comma);
+
+    pbetween(lparen, param_list, rparen)
+}
+
 pub fn plet<'a>() -> impl Parser<'a, Output = ()> {
     let let_binding = pleft(pthen(pstring("let"), pws()));
     let let_binding = pright(pthen(let_binding, pidentifier()));
