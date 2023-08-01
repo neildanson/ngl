@@ -106,7 +106,10 @@ fn pthen_impl<'a, T, U>(
         let result2 = parser2.parse(state1);
         result2.map(|(token2, state2)| {
             let start = token1.start;
-            let length = token1.length + token2.length;
+
+            let end_token1 = token1.start + token1.length;
+            let gap = token2.start - end_token1;
+            let length = gap + token1.length + token2.length;
             let token = Token::new((token1, token2), start, length);
             (token, state2)
         })

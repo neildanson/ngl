@@ -53,7 +53,7 @@ fn test_param() {
                 Token::new("right".to_string(), 7, 5),
             ),
             start: 0,
-            length: 9, //This should be 7 + 5 - 0
+            length: 12,
         },
         ContinuationState {
             remaining: "",
@@ -78,7 +78,7 @@ fn test_params() {
                         Token::new("right".to_string(), 8, 5),
                     ),
                     1,
-                    9,
+                    12,
                 ),
                 Token::new(
                     Parameter(
@@ -86,11 +86,11 @@ fn test_params() {
                         Token::new("righty".to_string(), 21, 6),
                     ),
                     15,
-                    11,
+                    12,
                 ),
             ],
             start: 1,
-            length: 12,
+            length: 26,
         },
         ContinuationState {
             remaining: "",
