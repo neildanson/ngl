@@ -48,9 +48,12 @@ fn test_param() {
     let result = parser.parse("left : right".into());
     let expected = Ok((
         Token {
-            value: Parameter("left".to_string(), "right".to_string()),
+            value: Parameter(
+                Token::new("left".to_string(), 0, 4),
+                Token::new("right".to_string(), 7, 5),
+            ),
             start: 0,
-            length: 9,
+            length: 9, //This should be 7 + 5 - 0
         },
         ContinuationState {
             remaining: "",
@@ -69,8 +72,22 @@ fn test_params() {
     let expected = Ok((
         Token {
             value: vec![
-                Token::new(Parameter("left".to_string(), "right".to_string()), 1, 9),
-                Token::new(Parameter("lefty".to_string(), "righty".to_string()), 15, 11),
+                Token::new(
+                    Parameter(
+                        Token::new("left".to_string(), 1, 4),
+                        Token::new("right".to_string(), 8, 5),
+                    ),
+                    1,
+                    9,
+                ),
+                Token::new(
+                    Parameter(
+                        Token::new("lefty".to_string(), 15, 5),
+                        Token::new("righty".to_string(), 21, 6),
+                    ),
+                    15,
+                    11,
+                ),
             ],
             start: 1,
             length: 12,

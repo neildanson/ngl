@@ -7,7 +7,7 @@ pub enum Value {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct Parameter(pub String, pub String); //name, type
+pub struct Parameter(pub Token<String>, pub Token<String>); //name, type
 
 #[derive(Debug, Clone)]
 pub struct Fun {

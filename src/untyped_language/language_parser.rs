@@ -64,9 +64,7 @@ pub fn pparam<'a>() -> impl Parser<'a, Output = Parameter> {
     let param_binding = pleft(pthen(param_binding, pws()));
     let param_binding = pthen(param_binding, pidentifier());
     let param_binding = pleft(pthen(param_binding, pws()));
-    pmap(param_binding, |(name, type_)| {
-        Parameter(name.value, type_.value)
-    })
+    pmap(param_binding, |(name, type_)| Parameter(name, type_))
 }
 
 pub fn pparams<'a>() -> impl Parser<'a, Output = Vec<Token<Parameter>>> {
