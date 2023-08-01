@@ -168,7 +168,7 @@ where
     })
 }
 
-fn pany_impl<'a>(valid_chars: &'a [char], input: ContinuationState<'a>) -> ParseResult<'a, char> {
+fn pany_impl<'a>(valid_chars: Vec<char>, input: ContinuationState<'a>) -> ParseResult<'a, char> {
     for c in valid_chars.iter() {
         let result = pchar_impl(*c, input);
         match result {
@@ -305,8 +305,8 @@ pub fn poptional<'a, T: Clone + 'a>(
     ClosureParser::new(move |input| poptional_impl(parser.clone(), input))
 }
 
-pub fn pany<'a>(valid_chars: &'a [char]) -> impl Parser<'a, Output = char> {
-    ClosureParser::new(move |input| pany_impl(valid_chars, input))
+pub fn pany<'a>(valid_chars: Vec<char>) -> impl Parser<'a, Output = char> {
+    ClosureParser::new(move |input| pany_impl(valid_chars.clone(), input))
 }
 
 pub fn pmap<'a, T: 'a, U: Clone + 'a, F>(
