@@ -39,7 +39,6 @@ pub fn pidentifier<'a>() -> impl Parser<'a, Output = String> {
         alpha
     };
 
-    //structure - p1(alpha) + pmany(por(alpha, pany(['_']))
     let ident = pany(alpha());
 
     let mut alpha_numeric = alpha();
@@ -47,8 +46,6 @@ pub fn pidentifier<'a>() -> impl Parser<'a, Output = String> {
     alpha_numeric.extend(numeric);
     let alpha_numeric = pmany(pany(alpha_numeric));
     let ident = pthen(ident, alpha_numeric);
-
-    //let ident = pmany(pany(alpha));
 
     pmap(ident, |(ident, rest)| {
         let mut rest: String = rest.value.into_iter().map(|c| c.value).collect();

@@ -52,7 +52,7 @@ fn parse_string_fail(c: &mut Criterion) {
 }
 
 fn parse_int_success(c: &mut Criterion) {
-    let any_number = pany(&['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']);
+    let any_number = pany(vec!['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']);
     let many_numbers = pmany1(any_number);
     let number_parser = pthen(poptional(pchar('-')), many_numbers);
 

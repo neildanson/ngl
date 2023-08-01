@@ -168,6 +168,7 @@ fn test_identifier_4() {
 #[test]
 fn test_identifier_fail() {
     let parser = pidentifier();
+    //identifiers cannot start with a number
     let result = parser.parse("1left".into());
     let expected = Err(Error::new(
         "A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W, X, Y, Z, a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p, q, r, s, t, u, v, w, x, y, z or _".to_string(),
