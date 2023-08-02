@@ -6,8 +6,9 @@ const FUN: &str = "fun";
 const LET: &str = "let";
 const IF: &str = "if";
 const ELSE: &str = "else";
-
-const RESERVED: [&str; 4] = [FUN, LET, IF, ELSE];
+const TRUE: &str = "true";
+const FALSE: &str = "false";
+const RESERVED: [&str; 6] = [FUN, LET, IF, ELSE, TRUE, FALSE];
 
 pub(crate) fn pint<'a>() -> impl Parser<'a, Output = Value> {
     let any_number = pany(vec!['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']);
@@ -25,8 +26,8 @@ pub(crate) fn pint<'a>() -> impl Parser<'a, Output = Value> {
 }
 
 fn pbool<'a>() -> impl Parser<'a, Output = Value> {
-    let ptrue = pmap(pstring("true"), |_| true);
-    let pfalse = pmap(pstring("false"), |_| false);
+    let ptrue = pmap(pstring(TRUE), |_| true);
+    let pfalse = pmap(pstring(FALSE), |_| false);
     pmap(por(ptrue, pfalse), Value::Bool)
 }
 
@@ -34,6 +35,7 @@ fn pvalue<'a>() -> impl Parser<'a, Output = Value> {
     por(pint(), pbool())
 }
 
+//TODO disallow reserved words
 pub fn pidentifier<'a>() -> impl Parser<'a, Output = String> {
     let alpha = || {
         let alpha_lower: Vec<_> = ('a'..='z').collect();
@@ -84,7 +86,7 @@ pub fn pparams<'a>() -> impl Parser<'a, Output = Vec<Token<Parameter>>> {
     pbetween(lparen, param_list, rparen)
 }
 
-pub fn plet<'a>() -> impl Parser<'a, Output = ()> {
+pub fn plet<'a>() -> impl Parser<'a, Output = ExprOrStatement> {
     let let_binding = pleft(pthen(pstring("let"), pws()));
     let let_binding = pright(pthen(let_binding, pidentifier()));
     let let_binding = pleft(pthen(let_binding, pws()));
@@ -94,30 +96,30 @@ pub fn plet<'a>() -> impl Parser<'a, Output = ()> {
     let let_binding = pleft(pthen(let_binding, pws()));
     let let_binding = pleft(pthen(let_binding, pchar(';')));
     let let_binding = pleft(pthen(let_binding, pws()));
-    pmap(let_binding, |_| ())
+    pmap(let_binding, |(name, value)| {
+        ExprOrStatement::Statement(Statement::Let(name, value))
+    })
+}
+
+pub fn pbody<'a>() -> impl Parser<'a, Output = Vec<Token<ExprOrStatement>>> {
+    let plbrace = pleft(pthen(pchar('{'), pws()));
+    let prbrace = pleft(pthen(pchar('}'), pws()));
+    let pexprorstatement = pmany(plet());
+    pbetween(plbrace, pexprorstatement, prbrace)
 }
 
 pub fn pfun<'a>() -> impl Parser<'a, Output = Fun> {
     let fun_binding = pleft(pthen(pstring(FUN), pws()));
     let fun_binding = pright(pthen(fun_binding, pidentifier()));
     let fun_binding = pleft(pthen(fun_binding, pws()));
-    let fun_binding = pleft(pthen(fun_binding, pchar('(')));
+    let fun_binding = pthen(fun_binding, pparams());
     let fun_binding = pleft(pthen(fun_binding, pws()));
-    let fun_binding = pthen(fun_binding, psepby(pparam(), pthen(pchar(','), pws())));
+    let fun_binding = pthen(fun_binding, pbody());
 
-    let fun_binding = pleft(pthen(fun_binding, pws()));
-    let fun_binding = pleft(pthen(fun_binding, pchar(')')));
-    let fun_binding = pleft(pthen(fun_binding, pws()));
-    let fun_binding = pleft(pthen(fun_binding, pchar('{')));
-    let fun_binding = pleft(pthen(fun_binding, pws()));
-
-    let fun_binding = pmap(fun_binding, |(name, params)| Fun {
-        name,
-        params: params.value,
+    let fun_binding = pmap(fun_binding, |(name_and_params, body)| Fun {
+        name: name_and_params.value.0,
+        params: name_and_params.value.1.value,
+        body: body.value,
     });
     fun_binding
-    //fun_binding = pthen(fun_binding, pmany(let_binding))
-    //let fun_binding = pthen(fun_binding, pmany(let_binding));
-    //let fun_binding = pleft(pthen(fun_binding, pws()));
-    //let fun_binding = pleft(pthen(fun_binding, pchar('}')));
 }
