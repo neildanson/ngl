@@ -1,12 +1,6 @@
 use ngl::parser_combinator::*;
 use ngl::untyped_language::*;
 
-#[derive(Clone, Debug)]
-enum Value {
-    Number(i32),
-    Bool(bool),
-}
-
 fn main() {
     let fun_binding = pfun();
 
