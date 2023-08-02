@@ -103,6 +103,29 @@ fn test_params() {
 }
 
 #[test]
+fn test_let() {
+    let parser = plet();
+    let result = parser.parse("let x = 1".into());
+    let expected = Ok((
+        Token {
+            value: ExprOrStatement::Statement(Statement::Let(
+                Token::new("x".to_string(), 4, 1),
+                Token::new(Value::Number(1), 8, 1),
+            )),
+            start: 4,
+            length: 5,
+        },
+        ContinuationState {
+            remaining: "",
+            position: 9,
+            line_number: 0,
+            line_position: 9,
+        },
+    ));
+    assert_eq!(result, expected);
+}
+
+#[test]
 fn test_identifier_1() {
     let parser = pidentifier();
     let result = parser.parse("left".into());

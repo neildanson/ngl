@@ -2,7 +2,7 @@ use ngl::parser_combinator::*;
 use ngl::untyped_language::*;
 
 fn main() {
-    let fun_binding = pmany(pfun());
+    let fun_binding = pfun();
 
     let start = std::time::Instant::now();
 
@@ -10,24 +10,7 @@ fn main() {
         "fun name(param: type, paramx: typex) {
             let x = 1;
             let y = 2;
-        }
-        fun name(param: type, paramx: typex) {
-            let x = 1;
-            let y = 2;
-        }
-        fun name(param: type, paramx: typex) {
-            let x = 1;
-            let y = 2;
-        }
-        fun name(param: type, paramx: typex) {
-            let x = 1;
-            let y = 2;
-        }
-        fun name(param: type, paramx: typex) {
-            let x = 1;
-            let y = 2;
-        }
-        "
+        }"
         .into(),
     );
 

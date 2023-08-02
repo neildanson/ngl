@@ -31,7 +31,10 @@ impl Error {
     fn format_error(&self) -> String {
         format!(
             "Expected '{}' but got '{}' at line: {}, column: {}",
-            self.expected, self.actual, self.line_number, self.line_position
+            self.expected,
+            self.actual,
+            self.line_number + 1,
+            self.line_position + 1
         )
     }
 }

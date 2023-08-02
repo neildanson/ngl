@@ -67,6 +67,11 @@ pub fn pws<'a>() -> impl Parser<'a, Output = Vec<Token<char>>> {
     pmany(pany(vec![' ', '\n', '\t', '\r']))
 }
 
+pub fn pterminator<'a>() -> impl Parser<'a, Output = ()> {
+    let psemi = pmap(pchar(';'), |_| ());
+    pleft(pthen(psemi, pws()))
+}
+
 pub fn pparam<'a>() -> impl Parser<'a, Output = Parameter> {
     let param_binding = pleft(pthen(pidentifier(), pws()));
     let param_binding = pleft(pthen(param_binding, pchar(':')));
@@ -94,8 +99,6 @@ pub fn plet<'a>() -> impl Parser<'a, Output = ExprOrStatement> {
     let let_binding = pleft(pthen(let_binding, pws()));
     let let_binding = pthen(let_binding, pvalue());
     let let_binding = pleft(pthen(let_binding, pws()));
-    let let_binding = pleft(pthen(let_binding, pchar(';')));
-    let let_binding = pleft(pthen(let_binding, pws()));
     pmap(let_binding, |(name, value)| {
         ExprOrStatement::Statement(Statement::Let(name, value))
     })
@@ -104,7 +107,10 @@ pub fn plet<'a>() -> impl Parser<'a, Output = ExprOrStatement> {
 pub fn pbody<'a>() -> impl Parser<'a, Output = Vec<Token<ExprOrStatement>>> {
     let plbrace = pleft(pthen(pchar('{'), pws()));
     let prbrace = pleft(pthen(pchar('}'), pws()));
-    let pexprorstatement = pmany(plet());
+
+    let plet = pleft(pthen(plet(), pterminator()));
+
+    let pexprorstatement = pmany(plet);
     pbetween(plbrace, pexprorstatement, prbrace)
 }
 
