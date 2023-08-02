@@ -213,7 +213,7 @@ fn pmany_impl<'a, T>(
     let mut results = Vec::new();
     let mut cont = input;
     let mut error = None;
-    loop {
+    while error.is_none() {
         let result = parser.parse(cont);
         match result {
             Ok((token, state)) => {
@@ -222,7 +222,6 @@ fn pmany_impl<'a, T>(
             }
             Err(err) => {
                 error = Some(err);
-                break;
             }
         }
     }
