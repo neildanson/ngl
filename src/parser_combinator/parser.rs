@@ -41,7 +41,7 @@ where
     }
 }
 
-fn pchar_impl<'a>(c: char, input: ContinuationState<'a>) -> ParseResult<char> {
+fn pchar_impl(c: char, input: ContinuationState) -> ParseResult<char> {
     let mut chars = input.remaining.chars();
     match chars.next() {
         Some(letter) if letter == c => {
@@ -171,7 +171,7 @@ where
     })
 }
 
-fn pany_impl<'a>(valid_chars: Vec<char>, input: ContinuationState<'a>) -> ParseResult<'a, char> {
+fn pany_impl(valid_chars: Vec<char>, input: ContinuationState) -> ParseResult<char> {
     for c in valid_chars.iter() {
         let result = pchar_impl(*c, input);
         match result {
@@ -190,7 +190,7 @@ fn pany_impl<'a>(valid_chars: Vec<char>, input: ContinuationState<'a>) -> ParseR
             .join(", ");
         first + " or " + &valid_chars.last().unwrap().to_string()
     } else if valid_chars_length == 1 {
-        valid_chars.iter().next().unwrap().to_string()
+        valid_chars.first().unwrap().to_string()
     } else {
         "".to_string() //TODO - this should never happen
     };
@@ -284,7 +284,7 @@ pub fn pchar<'a>(value: char) -> impl Parser<'a, Output = char> {
     ClosureParser::new(move |input| pchar_impl(value, input))
 }
 
-pub fn pstring<'a>(value: &'a str) -> impl Parser<'a, Output = &'a str> {
+pub fn pstring(value: &str) -> impl Parser<Output = &str> {
     ClosureParser::new(move |input| pstring_impl(value, input))
 }
 

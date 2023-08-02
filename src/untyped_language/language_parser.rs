@@ -14,13 +14,13 @@ pub(crate) fn pint<'a>() -> impl Parser<'a, Output = Value> {
             None => number,
         }
     });
-    pmap(pnumber, |n| Value::Number(n))
+    pmap(pnumber, Value::Number)
 }
 
 fn pbool<'a>() -> impl Parser<'a, Output = Value> {
     let ptrue = pmap(pstring("true"), |_| true);
     let pfalse = pmap(pstring("false"), |_| false);
-    pmap(por(ptrue, pfalse), |b| Value::Bool(b))
+    pmap(por(ptrue, pfalse), Value::Bool)
 }
 
 fn pvalue<'a>() -> impl Parser<'a, Output = Value> {
@@ -105,7 +105,7 @@ pub fn pfun<'a>() -> impl Parser<'a, Output = Fun> {
     let fun_binding = pleft(pthen(fun_binding, pws()));
 
     let fun_binding = pmap(fun_binding, |(name, params)| Fun {
-        name: name,
+        name,
         params: params.value,
     });
     fun_binding
