@@ -7,7 +7,11 @@ pub enum Value {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub enum Expr {}
+pub enum Expr {
+    Value(Token<Value>),
+    Ident(Token<String>),
+    Call(Token<String>, Vec<Token<Expr>>),
+}
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Statement {
