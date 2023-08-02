@@ -2,6 +2,13 @@ use crate::parser_combinator::*;
 
 use super::*;
 
+const FUN: &str = "fun";
+const LET: &str = "let";
+const IF: &str = "if";
+const ELSE: &str = "else";
+
+const RESERVED: [&str; 4] = [FUN, LET, IF, ELSE];
+
 pub(crate) fn pint<'a>() -> impl Parser<'a, Output = Value> {
     let any_number = pany(vec!['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']);
     let many_numbers = pmany1(any_number);
@@ -91,7 +98,7 @@ pub fn plet<'a>() -> impl Parser<'a, Output = ()> {
 }
 
 pub fn pfun<'a>() -> impl Parser<'a, Output = Fun> {
-    let fun_binding = pleft(pthen(pstring("fun"), pws()));
+    let fun_binding = pleft(pthen(pstring(FUN), pws()));
     let fun_binding = pright(pthen(fun_binding, pidentifier()));
     let fun_binding = pleft(pthen(fun_binding, pws()));
     let fun_binding = pleft(pthen(fun_binding, pchar('(')));
