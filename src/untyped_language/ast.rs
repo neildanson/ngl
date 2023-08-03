@@ -8,7 +8,7 @@ pub enum Value {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Expr {
-    Value(Token<Value>),
+    Value(Value),
     Ident(String), //should this be token<string>?
     Call(Token<String>, Vec<Token<Expr>>),
 }

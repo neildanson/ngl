@@ -226,13 +226,13 @@ fn test_call() {
     let result = parser.parse("left(a,b)".into());
     let expected = Ok((
         Token {
-            value: ExprOrStatement::Expr(Expr::Call(
+            value: Expr::Call(
                 Token::new("left".to_string(), 0, 4),
                 vec![
                     Token::new(Expr::Ident("a".to_string()), 5, 1),
                     Token::new(Expr::Ident("b".to_string()), 7, 1),
                 ],
-            )),
+            ),
             start: 0,
             length: 8,
         },

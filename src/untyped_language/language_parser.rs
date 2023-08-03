@@ -103,20 +103,26 @@ pub fn plet<'a>() -> impl Parser<'a, Output = ExprOrStatement> {
     })
 }
 
-pub fn pcall<'a>() -> impl Parser<'a, Output = ExprOrStatement> {
+pub fn pexpr<'a>() -> impl Parser<'a, Output = Expr> {
+    let ident = pmap(pidentifier(), Expr::Ident);
+    let value = pmap(pvalue(), Expr::Value);
+    por(value, ident)
+}
+
+pub fn pcall<'a>() -> impl Parser<'a, Output = Expr> {
     let call_binding = pleft(pthen(pidentifier(), pws()));
     let lparen = pleft(pthen(pchar('('), pws()));
     let rparen = pleft(pthen(pchar(')'), pws()));
 
-    let ident_or_value = pmap(pidentifier(), Expr::Ident);
+    let expr = pexpr();
 
-    let params = psepby(ident_or_value, pleft(pthen(pchar(','), pws())));
+    let params = psepby(expr, pleft(pthen(pchar(','), pws())));
     let params = pbetween(lparen, params, rparen);
 
     let call_binding = pthen(call_binding, params);
     let call_binding = pleft(pthen(call_binding, pws()));
     pmap(call_binding, |(name, params)| {
-        ExprOrStatement::Expr(Expr::Call(name, params.value))
+        Expr::Call(name, params.value)
     })
 }
 
@@ -124,7 +130,8 @@ pub fn pbody<'a>() -> impl Parser<'a, Output = Vec<Token<ExprOrStatement>>> {
     let plbrace = pleft(pthen(pchar('{'), pws()));
     let prbrace = pleft(pthen(pchar('}'), pws()));
 
-    let expr_or_statement = por(pcall(), plet());
+    let call = pmap(pcall(), |call| ExprOrStatement::Expr(call));
+    let expr_or_statement = por(call, plet());
     let expr_or_statement = pleft(pthen(expr_or_statement, pterminator()));
 
     let pexprorstatement = pmany(expr_or_statement);
