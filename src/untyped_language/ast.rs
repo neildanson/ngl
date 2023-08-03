@@ -9,7 +9,7 @@ pub enum Value {
 #[derive(Debug, Clone, PartialEq)]
 pub enum Expr {
     Value(Token<Value>),
-    Ident(Token<String>),
+    Ident(String), //should this be token<string>?
     Call(Token<String>, Vec<Token<Expr>>),
 }
 

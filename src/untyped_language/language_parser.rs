@@ -36,7 +36,7 @@ fn pvalue<'a>() -> impl Parser<'a, Output = Value> {
 }
 
 //TODO disallow reserved words
-pub fn pidentifier<'a>() -> impl Parser<'a, Output = Token<String>> {
+pub fn pidentifier<'a>() -> impl Parser<'a, Output = String> {
     let alpha = || {
         let alpha_lower: Vec<_> = ('a'..='z').collect();
         let alpha_upper: Vec<_> = ('A'..='Z').collect();
@@ -59,7 +59,7 @@ pub fn pidentifier<'a>() -> impl Parser<'a, Output = Token<String>> {
     pmap(ident, |(start, rest)| {
         let mut result: String = rest.value.into_iter().map(|c| c.value).collect();
         result.insert(0, start.value);
-        Token::new(result, start.start, start.length + rest.length)
+        result
     })
 }
 
@@ -78,9 +78,7 @@ pub fn pparam<'a>() -> impl Parser<'a, Output = Parameter> {
     let param_binding = pleft(pthen(param_binding, pws()));
     let param_binding = pthen(param_binding, pidentifier());
     let param_binding = pleft(pthen(param_binding, pws()));
-    pmap(param_binding, |(name, type_)| {
-        Parameter(name.value, type_.value)
-    })
+    pmap(param_binding, |(name, type_)| Parameter(name, type_))
 }
 
 pub fn pparams<'a>() -> impl Parser<'a, Output = Vec<Token<Parameter>>> {
@@ -102,7 +100,7 @@ pub fn plet<'a>() -> impl Parser<'a, Output = ExprOrStatement> {
     let let_binding = pthen(let_binding, pvalue());
     let let_binding = pleft(pthen(let_binding, pws()));
     pmap(let_binding, |(name, value)| {
-        ExprOrStatement::Statement(Statement::Let(name.value, value))
+        ExprOrStatement::Statement(Statement::Let(name, value))
     })
 }
 
@@ -118,7 +116,7 @@ pub fn pcall<'a>() -> impl Parser<'a, Output = ExprOrStatement> {
 
     let call_binding = pthen(call_binding, params);
     pmap(call_binding, |(name, params)| {
-        ExprOrStatement::Expr(Expr::Call(name.value, params.value))
+        ExprOrStatement::Expr(Expr::Call(name, params.value))
     })
 }
 
@@ -142,7 +140,7 @@ pub fn pfun<'a>() -> impl Parser<'a, Output = Fun> {
     let fun_binding = pthen(fun_binding, pbody());
 
     let fun_binding = pmap(fun_binding, |(name_and_params, body)| Fun {
-        name: name_and_params.value.0.value,
+        name: name_and_params.value.0,
         params: name_and_params.value.1.value,
         body: body.value,
     });

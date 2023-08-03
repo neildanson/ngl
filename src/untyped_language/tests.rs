@@ -131,7 +131,7 @@ fn test_identifier_1() {
     let result = parser.parse("left".into());
     let expected = Ok((
         Token {
-            value: Token::new("left".to_string(), 0, 4),
+            value: "left".to_string(),
             start: 0,
             length: 4,
         },
@@ -151,7 +151,7 @@ fn test_identifier_2() {
     let result = parser.parse("left1".into());
     let expected = Ok((
         Token {
-            value: Token::new("left1".to_string(), 0, 5),
+            value: "left1".to_string(),
             start: 0,
             length: 5,
         },
@@ -171,7 +171,7 @@ fn test_identifier_3() {
     let result = parser.parse("left_1".into());
     let expected = Ok((
         Token {
-            value: Token::new("left_1".to_string(), 0, 6),
+            value: "left_1".to_string(),
             start: 0,
             length: 6,
         },
@@ -191,7 +191,7 @@ fn test_identifier_4() {
     let result = parser.parse("_left1".into());
     let expected = Ok((
         Token {
-            value: Token::new("_left1".to_string(), 0, 6),
+            value: "_left1".to_string(),
             start: 0,
             length: 6,
         },
