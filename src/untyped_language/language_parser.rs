@@ -56,10 +56,10 @@ pub fn pidentifier<'a>() -> impl Parser<'a, Output = String> {
     let alpha_numeric = pmany(pany(alpha_numeric));
     let ident = pthen(ident, alpha_numeric);
 
-    pmap(ident, |(ident, rest)| {
-        let mut rest: String = rest.value.into_iter().map(|c| c.value).collect();
-        rest.insert(0, ident.value);
-        rest
+    pmap(ident, |(start, rest)| {
+        let mut result: String = rest.value.into_iter().map(|c| c.value).collect();
+        result.insert(0, start.value);
+        result
     })
 }
 
@@ -104,13 +104,31 @@ pub fn plet<'a>() -> impl Parser<'a, Output = ExprOrStatement> {
     })
 }
 
+pub fn pcall<'a>() -> impl Parser<'a, Output = ExprOrStatement> {
+    let call_binding = pleft(pthen(pidentifier(), pws()));
+    let lparen = pleft(pthen(pchar('('), pws()));
+    let rparen = pleft(pthen(pchar(')'), pws()));
+
+    let ident_or_value = pmap(pidentifier(), |ident| Expr::Ident(ident));
+
+    let params = psepby(ident_or_value, pleft(pthen(pchar(','), pws())));
+    let params = pbetween(lparen, params, rparen);
+
+    let call_binding = pthen(call_binding, params);
+    let call_binding = pleft(pthen(call_binding, pws()));
+    pmap(call_binding, |(name, params)| {
+        ExprOrStatement::Expr(Expr::Call(name, params.value))
+    })
+}
+
 pub fn pbody<'a>() -> impl Parser<'a, Output = Vec<Token<ExprOrStatement>>> {
     let plbrace = pleft(pthen(pchar('{'), pws()));
     let prbrace = pleft(pthen(pchar('}'), pws()));
 
-    let plet = pleft(pthen(plet(), pterminator()));
+    let expr_or_statement = por(pcall(), plet());
+    let expr_or_statement = pleft(pthen(expr_or_statement, pterminator()));
 
-    let pexprorstatement = pmany(plet);
+    let pexprorstatement = pmany(expr_or_statement);
     pbetween(plbrace, pexprorstatement, prbrace)
 }
 

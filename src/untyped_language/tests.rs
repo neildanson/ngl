@@ -219,3 +219,29 @@ fn test_identifier_fail() {
     ));
     assert_eq!(result, expected);
 }
+
+#[test]
+fn test_call() {
+    let parser = pcall();
+    let result = parser.parse("left(a,b)".into());
+    let expected = Ok((
+        Token {
+            value: ExprOrStatement::Expr(Expr::Call(
+                Token::new("left".to_string(), 0, 4),
+                vec![
+                    Token::new(Expr::Ident("a".to_string()), 5, 1),
+                    Token::new(Expr::Ident("b".to_string()), 7, 1),
+                ],
+            )),
+            start: 0,
+            length: 8,
+        },
+        ContinuationState {
+            remaining: "",
+            position: 9,
+            line_number: 0,
+            line_position: 9,
+        },
+    ));
+    assert_eq!(result, expected);
+}
