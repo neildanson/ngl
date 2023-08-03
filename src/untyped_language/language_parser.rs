@@ -10,8 +10,22 @@ const TRUE: &str = "true";
 const FALSE: &str = "false";
 const RESERVED: [&str; 6] = [FUN, LET, IF, ELSE, TRUE, FALSE];
 
+const NUMBERS: [char; 10] = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
+const ALPHA: [char; 53] = [
+    'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S',
+    'T', 'U', 'V', 'W', 'X', 'Y', 'Z', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l',
+    'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', '_',
+];
+const ALPHA_NUMERIC: [char; 63] = [
+    'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S',
+    'T', 'U', 'V', 'W', 'X', 'Y', 'Z', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l',
+    'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', '_', '0', '1', '2', '3',
+    '4', '5', '6', '7', '8', '9',
+];
+const WS: [char; 4] = [' ', '\n', '\t', '\r'];
+
 pub(crate) fn pint<'a>() -> impl Parser<'a, Output = Value> {
-    let any_number = pany(vec!['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']);
+    let any_number = pany(&NUMBERS);
     let many_numbers = pmany1(any_number);
     let number_parser = pthen(poptional(pchar('-')), many_numbers);
     let pnumber = pmap(number_parser, move |(negate, value)| {
@@ -37,23 +51,8 @@ fn pvalue<'a>() -> impl Parser<'a, Output = Value> {
 
 //TODO disallow reserved words
 pub fn pidentifier<'a>() -> impl Parser<'a, Output = String> {
-    let alpha = || {
-        let alpha_lower: Vec<_> = ('a'..='z').collect();
-        let alpha_upper: Vec<_> = ('A'..='Z').collect();
-
-        let mut alpha: Vec<char> = Vec::new();
-        alpha.extend(alpha_upper);
-        alpha.extend(alpha_lower);
-        alpha.push('_');
-        alpha
-    };
-
-    let ident = pany(alpha());
-
-    let mut alpha_numeric = alpha();
-    let numeric = ('0'..='9').collect::<Vec<_>>();
-    alpha_numeric.extend(numeric);
-    let alpha_numeric = pmany(pany(alpha_numeric));
+    let ident = pany(&ALPHA);
+    let alpha_numeric = pmany(pany(&ALPHA_NUMERIC));
     let ident = pthen(ident, alpha_numeric);
 
     pmap(ident, |(start, rest)| {
@@ -64,7 +63,7 @@ pub fn pidentifier<'a>() -> impl Parser<'a, Output = String> {
 }
 
 pub fn pws<'a>() -> impl Parser<'a, Output = Vec<Token<char>>> {
-    pmany(pany(vec![' ', '\n', '\t', '\r']))
+    pmany(pany(&WS))
 }
 
 pub fn pterminator<'a>() -> impl Parser<'a, Output = ()> {
@@ -109,7 +108,7 @@ pub fn pcall<'a>() -> impl Parser<'a, Output = ExprOrStatement> {
     let lparen = pleft(pthen(pchar('('), pws()));
     let rparen = pleft(pthen(pchar(')'), pws()));
 
-    let ident_or_value = pmap(pidentifier(), |ident| Expr::Ident(ident));
+    let ident_or_value = pmap(pidentifier(), Expr::Ident);
 
     let params = psepby(ident_or_value, pleft(pthen(pchar(','), pws())));
     let params = pbetween(lparen, params, rparen);
