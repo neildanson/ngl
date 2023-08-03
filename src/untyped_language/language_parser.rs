@@ -115,6 +115,7 @@ pub fn pcall<'a>() -> impl Parser<'a, Output = ExprOrStatement> {
     let params = pbetween(lparen, params, rparen);
 
     let call_binding = pthen(call_binding, params);
+    let call_binding = pleft(pthen(call_binding, pws()));
     pmap(call_binding, |(name, params)| {
         ExprOrStatement::Expr(Expr::Call(name, params.value))
     })
