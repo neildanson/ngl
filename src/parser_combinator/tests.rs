@@ -278,7 +278,7 @@ fn test_pchoice_fail() {
 
 #[test]
 fn test_pany_success() {
-    let parser = pany(vec!['a', 'b', 'c']);
+    let parser = pany(&['a', 'b', 'c']);
     let result = parser.parse("b".into());
     let expected = Ok((
         Token {
@@ -298,7 +298,7 @@ fn test_pany_success() {
 
 #[test]
 fn test_pany_fail() {
-    let parser = pany(vec!['a', 'b', 'c']);
+    let parser = pany(&['a', 'b', 'c']);
     let result = parser.parse("d".into());
     let expected = Err(Error::new(
         "a, b or c".to_string(),
