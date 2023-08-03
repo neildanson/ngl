@@ -110,7 +110,7 @@ fn test_let() {
         Token {
             value: ExprOrStatement::Statement(Statement::Let(
                 Token::new("x".to_string(), 4, 1),
-                Token::new(Value::Number(1), 8, 1),
+                Token::new(Expr::Value(Value::Number(1)), 8, 1),
             )),
             start: 4,
             length: 5,

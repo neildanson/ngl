@@ -10,6 +10,7 @@ fn main() {
         "fun name(param: type, paramx: typex) {
             let x = 1;
             call(x, y, 3);
+            let result = x;
         }"
         .into(),
     );

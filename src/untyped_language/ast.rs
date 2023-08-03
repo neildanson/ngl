@@ -15,7 +15,7 @@ pub enum Expr {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Statement {
-    Let(Token<String>, Token<Value>),
+    Let(Token<String>, Token<Expr>),
 }
 
 #[derive(Debug, Clone, PartialEq)]

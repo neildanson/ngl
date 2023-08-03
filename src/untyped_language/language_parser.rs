@@ -3,12 +3,12 @@ use crate::parser_combinator::*;
 use super::*;
 
 const FUN: &str = "fun";
-const LET: &str = "let";
-const IF: &str = "if";
-const ELSE: &str = "else";
+const _LET: &str = "let";
+const _IF: &str = "if";
+const _ELSE: &str = "else";
 const TRUE: &str = "true";
 const FALSE: &str = "false";
-const RESERVED: [&str; 6] = [FUN, LET, IF, ELSE, TRUE, FALSE];
+const _RESERVED: [&str; 6] = [FUN, _LET, _IF, _ELSE, TRUE, FALSE];
 
 const NUMBERS: [char; 10] = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
 const ALPHA: [char; 53] = [
@@ -96,7 +96,7 @@ pub fn plet<'a>() -> impl Parser<'a, Output = ExprOrStatement> {
     let let_binding = pleft(pthen(let_binding, pws()));
     let let_binding = pleft(pthen(let_binding, pchar('=')));
     let let_binding = pleft(pthen(let_binding, pws()));
-    let let_binding = pthen(let_binding, pvalue());
+    let let_binding = pthen(let_binding, pexpr());
     let let_binding = pleft(pthen(let_binding, pws()));
     pmap(let_binding, |(name, value)| {
         ExprOrStatement::Statement(Statement::Let(name, value))
