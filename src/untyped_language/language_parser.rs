@@ -111,7 +111,7 @@ pub fn pcall<'a>() -> impl Parser<'a, Output = ExprOrStatement> {
 
     let ident_or_value = pmap(pidentifier(), |ident| Expr::Ident(ident));
 
-    let params = psepby(ident_or_value, pchar(','));
+    let params = psepby(ident_or_value, pleft(pthen(pchar(','), pws())));
     let params = pbetween(lparen, params, rparen);
 
     let call_binding = pthen(call_binding, params);
