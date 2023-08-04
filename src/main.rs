@@ -7,7 +7,7 @@ fn main() {
     let start = std::time::Instant::now();
 
     let result = fun_binding.parse(
-        "fun name(param: type, param_x: type_x) {
+        "fun name(param: type, param_x: type_x) -> unit {
             let x = 1;
             call(x, param, function(3,4));
             

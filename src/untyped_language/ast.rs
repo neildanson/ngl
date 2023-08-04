@@ -32,4 +32,5 @@ pub struct Fun {
     pub name: Token<String>,
     pub params: Vec<Token<Parameter>>,
     pub body: Vec<Token<ExprOrStatement>>,
+    pub return_type: Token<String>,
 }
