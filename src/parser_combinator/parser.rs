@@ -278,6 +278,28 @@ fn p1_impl<'a, T>(
     }
 }
 
+fn pchoice_impl<'a, T>(
+    parsers: Vec<impl Parser<'a, Output = T>>,
+    input: ContinuationState<'a>,
+) -> ParseResult<'a, T> {
+    let mut errors = Vec::new();
+    for parser in parsers.iter() {
+        let result = parser.parse(input);
+        match result {
+            Ok((token, cont)) => return Ok((token, cont)),
+            Err(err) => errors.push(err),
+        }
+    }
+
+    let mut error = errors.remove(0);
+    for err in errors.iter() {
+        let err = err.clone();
+        error = error + err;
+    }
+
+    Err(error)
+}
+
 //TODO - can I make these using a macro????
 pub fn pchar<'a>(value: char) -> impl Parser<'a, Output = char> {
     ClosureParser::new(move |input| pchar_impl(value, input))
@@ -376,19 +398,8 @@ pub fn pmany1<'a, T: Clone + 'a>(
     p1(pmany(parser))
 }
 
-/*
-#[macro_export]
-macro_rules! pchoice {
-    ($head:expr) => ({
-        move |input| $head(input) //TODO - we should accumulate the errors for choice (ie "a" or "b" )
-    });
-    ($head:expr, $($tail:expr),*) => ({
-        move |input| {
-            let result1 = $head(input);
-            result1.or_else(|error1|{
-                let result = pchoice!($($tail),*)(input);
-                result.map_err(|error2| error1 + error2)
-            })
-        }});
+pub fn pchoice<'a, T: Clone + 'a>(
+    parsers: Vec<impl Parser<'a, Output = T>>,
+) -> impl Parser<'a, Output = T> {
+    ClosureParser::new(move |input| pchoice_impl(parsers.clone(), input))
 }
- */
