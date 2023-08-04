@@ -396,16 +396,16 @@ pub fn pchoice<'a, T: Clone + 'a>(parsers: Vec<impl Parser<'a, T>>) -> impl Pars
 }
 
 #[macro_export]
-macro_rules! pchoice_macro {
+macro_rules! pchoice {
     ($head:expr) => ({
-        move |input| $head.parse(input) //TODO - we should accumulate the errors for choice (ie "a" or "b" )
+        ClosureParser::new(move |input| $head.parse(input))
     });
     ($head:expr, $($tail:expr),*) => ({
         ClosureParser::new(
         move |input| {
             let result1 = $head.parse(input);
             result1.or_else(|error1|{
-                let result = pchoice_macro!($($tail),*)(input);
+                let result = pchoice!($($tail),*).parse(input);
                 result.map_err(|error2| error1 + error2)
             })
         })});

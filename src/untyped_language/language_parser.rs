@@ -1,5 +1,5 @@
 use crate::parser_combinator::*;
-use crate::pchoice_macro;
+use crate::pchoice;
 
 use super::*;
 
@@ -105,10 +105,8 @@ pub fn plet<'a>() -> impl Parser<'a, ExprOrStatement> {
 }
 
 pub fn pexpr<'a>() -> impl Parser<'a, Expr> {
-    //let ident = pmap(pidentifier(), Expr::Ident);
     let value = pmap(pvalue(), Expr::Value);
-    pchoice_macro!(value, pcall()) //, pmap(pidentifier(), Expr::Ident))
-                                   //por(value, ident)
+    pchoice!(value, pcall(), pmap(pidentifier(), Expr::Ident))
 }
 
 pub fn pcall<'a>() -> impl Parser<'a, Expr> {

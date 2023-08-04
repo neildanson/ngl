@@ -276,6 +276,20 @@ fn test_pchoice_fail() {
 }
 
 #[test]
+fn test_pchoice_fail_macro() {
+    let parser = pchoice!(pchar('a'), pchar('b'), pchar('c'));
+    let result = parser.parse("d".into());
+    let expected = Err(Error::new(
+        "a or b or c".to_string(),
+        "d".to_string(),
+        0,
+        0,
+        0,
+    ));
+    assert_eq!(result, expected);
+}
+
+#[test]
 fn test_pany_success() {
     let parser = pany(&['a', 'b', 'c']);
     let result = parser.parse("b".into());
