@@ -9,7 +9,7 @@ pub trait Parser<'a, Output>: Clone {
     fn parse(&self, input: ContinuationState<'a>) -> ParseResult<'a, Output>;
 }
 #[derive(Clone)]
-pub struct ClosureParser<'a, Output, F>
+struct ClosureParser<'a, Output, F>
 where
     F: Fn(ContinuationState<'a>) -> ParseResult<'a, Output>,
 {
@@ -22,10 +22,17 @@ where
     F: Fn(ContinuationState<'a>) -> ParseResult<'a, Output>,
 {
     pub fn new(parser: F) -> impl Parser<'a, Output> {
-        ClosureParser {
-            parser,
-            _phantom: std::marker::PhantomData,
-        }
+        parser_from_fn(parser)
+    }
+}
+
+pub fn parser_from_fn<'a, Output: Clone + 'a, F: Clone>(parser: F) -> impl Parser<'a, Output>
+where
+    F: Fn(ContinuationState<'a>) -> ParseResult<'a, Output>,
+{
+    ClosureParser {
+        parser,
+        _phantom: std::marker::PhantomData,
     }
 }
 
@@ -398,15 +405,16 @@ pub fn pchoice<'a, T: Clone + 'a>(parsers: Vec<impl Parser<'a, T>>) -> impl Pars
 #[macro_export]
 macro_rules! pchoice {
     ($head:expr) => ({
-        ClosureParser::new(move |input| $head.parse(input))
+        parser_from_fn(move |input| $head.parse(input))
     });
     ($head:expr, $($tail:expr),*) => ({
-        ClosureParser::new(
-        move |input| {
-            let result1 = $head.parse(input);
-            result1.or_else(|error1|{
-                let result = pchoice!($($tail),*).parse(input);
-                result.map_err(|error2| error1 + error2)
+        parser_from_fn(
+            move |input| {
+                let result1 = $head.parse(input);
+                result1.or_else(|error1|{
+                    let result = pchoice!($($tail),*).parse(input);
+                    result.map_err(|error2| error1 + error2)
+                })
             })
-        })});
+    });
 }
