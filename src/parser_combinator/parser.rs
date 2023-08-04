@@ -304,6 +304,29 @@ fn pchoice_impl<'a, T>(
     Err(error)
 }
 
+fn ptakeuntil_impl<'a, T>(
+    until: impl Parser<'a, T>,
+    input: ContinuationState<'a>,
+) -> ParseResult<&'a str> {
+    let result = until.parse(input);
+
+    match result {
+        Ok((_, cont)) => {
+            //When we hit OK, then we terminate
+            let len = cont.position - input.position;
+            return Ok((
+                Token::new(&input.remaining[0..len], input.position, len),
+                cont,
+            ));
+        }
+        Err(_) => {
+            //otherwise =
+            let cont = input.advance(1, 0); //TODO line advances
+            return ptakeuntil_impl(until, cont);
+        }
+    }
+}
+
 //TODO - can I make these using a macro????
 pub fn pchar<'a>(value: char) -> impl Parser<'a, char> {
     ClosureParser::new(move |input| pchar_impl(value, input))
@@ -400,6 +423,10 @@ pub fn pmany1<'a, T: Clone + 'a>(
 
 pub fn pchoice<'a, T: Clone + 'a>(parsers: Vec<impl Parser<'a, T>>) -> impl Parser<'a, T> {
     ClosureParser::new(move |input| pchoice_impl(parsers.clone(), input))
+}
+
+pub fn ptake_until<'a, T: Clone + 'a>(until: impl Parser<'a, T>) -> impl Parser<'a, &'a str> {
+    ClosureParser::new(move |input| ptakeuntil_impl(until.clone(), input))
 }
 
 #[macro_export]

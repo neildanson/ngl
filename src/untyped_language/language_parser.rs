@@ -46,13 +46,10 @@ fn pbool<'a>() -> impl Parser<'a, Value> {
     pmap(por(ptrue, pfalse), Value::Bool)
 }
 
-fn pquoted_string<'a>() -> impl Parser<'a, Expr> {
+fn pquoted_string<'a>() -> impl Parser<'a, Value> {
     let pquote = pchar('"');
-    let pstring = pmany(pnone_of(&['"']));
-    let pquote = pchar('"');
-    pmap(pbetween(pquote, pstring, pquote), |string| {
-        Expr::Value(Value::String(string.value))
-    })
+    let pstring = pright(pthen(pquote.clone(), ptake_until(pquote)));
+    pmap(pstring, |string| Value::String(string.to_string()))
 }
 
 fn pvalue<'a>() -> impl Parser<'a, Value> {
