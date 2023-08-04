@@ -26,7 +26,7 @@ where
     }
 }
 
-pub fn parser_from_fn<'a, Output: Clone + 'a, F: Clone>(parser: F) -> impl Parser<'a, Output>
+pub const fn parser_from_fn<'a, Output: Clone + 'a, F: Clone>(parser: F) -> impl Parser<'a, Output>
 where
     F: Fn(ContinuationState<'a>) -> ParseResult<'a, Output>,
 {
@@ -304,6 +304,29 @@ fn pchoice_impl<'a, T>(
     Err(error)
 }
 
+//TODO deal with case where string is never termianted
+fn ptakeuntil_impl<'a, T>(
+    until: impl Parser<'a, T>,
+    start: Option<ContinuationState<'a>>,
+    input: ContinuationState<'a>,
+) -> ParseResult<'a, &'a str> {
+    let result = until.parse(input);
+    let start = start.unwrap_or(input);
+    match result {
+        Ok((_, cont)) => {
+            let len = cont.position - start.position - 1;
+            return Ok((
+                Token::new(&start.remaining[0..len], start.position, len),
+                cont,
+            ));
+        }
+        Err(_) => {
+            let cont = input.advance(1, 0); //TODO line advances
+            return ptakeuntil_impl(until, Some(start), cont);
+        }
+    }
+}
+
 //TODO - can I make these using a macro????
 pub fn pchar<'a>(value: char) -> impl Parser<'a, char> {
     ClosureParser::new(move |input| pchar_impl(value, input))
@@ -400,6 +423,10 @@ pub fn pmany1<'a, T: Clone + 'a>(
 
 pub fn pchoice<'a, T: Clone + 'a>(parsers: Vec<impl Parser<'a, T>>) -> impl Parser<'a, T> {
     ClosureParser::new(move |input| pchoice_impl(parsers.clone(), input))
+}
+
+pub fn ptake_until<'a, T: Clone + 'a>(until: impl Parser<'a, T>) -> impl Parser<'a, &'a str> {
+    ClosureParser::new(move |input| ptakeuntil_impl(until.clone(), None, input))
 }
 
 #[macro_export]

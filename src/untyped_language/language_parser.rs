@@ -46,8 +46,14 @@ fn pbool<'a>() -> impl Parser<'a, Value> {
     pmap(por(ptrue, pfalse), Value::Bool)
 }
 
+pub fn pquoted_string<'a>() -> impl Parser<'a, Value> {
+    let pquote = pchar('"');
+    let pstring = pright(pthen(pquote.clone(), ptake_until(pquote)));
+    pmap(pstring, |string| Value::String(string.to_string()))
+}
+
 fn pvalue<'a>() -> impl Parser<'a, Value> {
-    por(pint(), pbool())
+    pchoice!(pint(), pbool(), pquoted_string())
 }
 
 //TODO disallow reserved words
@@ -144,12 +150,17 @@ pub fn pfun<'a>() -> impl Parser<'a, Fun> {
     let fun_binding = pleft(pthen(fun_binding, pws()));
     let fun_binding = pthen(fun_binding, pparams());
     let fun_binding = pleft(pthen(fun_binding, pws()));
+    let fun_binding = pleft(pthen(fun_binding, pstring("->")));
+    let fun_binding = pleft(pthen(fun_binding, pws()));
+    let fun_binding = pthen(fun_binding, pidentifier());
+    let fun_binding = pleft(pthen(fun_binding, pws()));
     let fun_binding = pthen(fun_binding, pbody());
 
     let fun_binding = pmap(fun_binding, |(name_and_params, body)| Fun {
-        name: name_and_params.value.0,
-        params: name_and_params.value.1.value,
+        name: name_and_params.value.0.value.0,
+        params: name_and_params.value.0.value.1.value,
         body: body.value,
+        return_type: name_and_params.value.1,
     });
     fun_binding
 }

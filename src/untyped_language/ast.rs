@@ -4,6 +4,7 @@ use crate::parser_combinator::Token;
 pub enum Value {
     Number(i32),
     Bool(bool),
+    String(String),
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -32,4 +33,5 @@ pub struct Fun {
     pub name: Token<String>,
     pub params: Vec<Token<Parameter>>,
     pub body: Vec<Token<ExprOrStatement>>,
+    pub return_type: Token<String>,
 }
