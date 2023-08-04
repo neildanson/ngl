@@ -1,4 +1,5 @@
 use crate::parser_combinator::*;
+use crate::pchoice_macro;
 
 use super::*;
 
@@ -24,7 +25,7 @@ const ALPHA_NUMERIC: [char; 63] = [
 ];
 const WS: [char; 4] = [' ', '\n', '\t', '\r'];
 
-pub(crate) fn pint<'a>() -> impl Parser<'a, Output = Value> {
+pub(crate) fn pint<'a>() -> impl Parser<'a, Value> {
     let any_number = pany(&NUMBERS);
     let many_numbers = pmany1(any_number);
     let number_parser = pthen(poptional(pchar('-')), many_numbers);
@@ -39,18 +40,18 @@ pub(crate) fn pint<'a>() -> impl Parser<'a, Output = Value> {
     pmap(pnumber, Value::Number)
 }
 
-fn pbool<'a>() -> impl Parser<'a, Output = Value> {
+fn pbool<'a>() -> impl Parser<'a, Value> {
     let ptrue = pmap(pstring(TRUE), |_| true);
     let pfalse = pmap(pstring(FALSE), |_| false);
     pmap(por(ptrue, pfalse), Value::Bool)
 }
 
-fn pvalue<'a>() -> impl Parser<'a, Output = Value> {
+fn pvalue<'a>() -> impl Parser<'a, Value> {
     por(pint(), pbool())
 }
 
 //TODO disallow reserved words
-pub fn pidentifier<'a>() -> impl Parser<'a, Output = String> {
+pub fn pidentifier<'a>() -> impl Parser<'a, String> {
     let ident = pany(&ALPHA);
     let alpha_numeric = pmany(pany(&ALPHA_NUMERIC));
     let ident = pthen(ident, alpha_numeric);
@@ -62,16 +63,16 @@ pub fn pidentifier<'a>() -> impl Parser<'a, Output = String> {
     })
 }
 
-pub fn pws<'a>() -> impl Parser<'a, Output = Vec<Token<char>>> {
+pub fn pws<'a>() -> impl Parser<'a, Vec<Token<char>>> {
     pmany(pany(&WS))
 }
 
-pub fn pterminator<'a>() -> impl Parser<'a, Output = ()> {
+pub fn pterminator<'a>() -> impl Parser<'a, ()> {
     let psemi = pmap(pchar(';'), |_| ());
     pleft(pthen(psemi, pws()))
 }
 
-pub fn pparam<'a>() -> impl Parser<'a, Output = Parameter> {
+pub fn pparam<'a>() -> impl Parser<'a, Parameter> {
     let param_binding = pleft(pthen(pidentifier(), pws()));
     let param_binding = pleft(pthen(param_binding, pchar(':')));
     let param_binding = pleft(pthen(param_binding, pws()));
@@ -80,7 +81,7 @@ pub fn pparam<'a>() -> impl Parser<'a, Output = Parameter> {
     pmap(param_binding, |(name, type_)| Parameter(name, type_))
 }
 
-pub fn pparams<'a>() -> impl Parser<'a, Output = Vec<Token<Parameter>>> {
+pub fn pparams<'a>() -> impl Parser<'a, Vec<Token<Parameter>>> {
     let lparen = pleft(pthen(pchar('('), pws()));
     let rparen = pleft(pthen(pchar(')'), pws()));
     let comma = pleft(pthen(pchar(','), pws()));
@@ -90,7 +91,7 @@ pub fn pparams<'a>() -> impl Parser<'a, Output = Vec<Token<Parameter>>> {
     pbetween(lparen, param_list, rparen)
 }
 
-pub fn plet<'a>() -> impl Parser<'a, Output = ExprOrStatement> {
+pub fn plet<'a>() -> impl Parser<'a, ExprOrStatement> {
     let let_binding = pleft(pthen(pstring("let"), pws()));
     let let_binding = pright(pthen(let_binding, pidentifier()));
     let let_binding = pleft(pthen(let_binding, pws()));
@@ -103,13 +104,14 @@ pub fn plet<'a>() -> impl Parser<'a, Output = ExprOrStatement> {
     })
 }
 
-pub fn pexpr<'a>() -> impl Parser<'a, Output = Expr> {
+pub fn pexpr<'a>() -> impl Parser<'a, Expr> {
     let ident = pmap(pidentifier(), Expr::Ident);
     let value = pmap(pvalue(), Expr::Value);
-    por(value, ident)
+    pchoice_macro!(value, ident)
+    //por(value, ident)
 }
 
-pub fn pcall<'a>() -> impl Parser<'a, Output = Expr> {
+pub fn pcall<'a>() -> impl Parser<'a, Expr> {
     let call_binding = pleft(pthen(pidentifier(), pws()));
     let lparen = pleft(pthen(pchar('('), pws()));
     let rparen = pleft(pthen(pchar(')'), pws()));
@@ -126,7 +128,7 @@ pub fn pcall<'a>() -> impl Parser<'a, Output = Expr> {
     })
 }
 
-pub fn pbody<'a>() -> impl Parser<'a, Output = Vec<Token<ExprOrStatement>>> {
+pub fn pbody<'a>() -> impl Parser<'a, Vec<Token<ExprOrStatement>>> {
     let plbrace = pleft(pthen(pchar('{'), pws()));
     let prbrace = pleft(pthen(pchar('}'), pws()));
 
@@ -138,7 +140,7 @@ pub fn pbody<'a>() -> impl Parser<'a, Output = Vec<Token<ExprOrStatement>>> {
     pbetween(plbrace, pexprorstatement, prbrace)
 }
 
-pub fn pfun<'a>() -> impl Parser<'a, Output = Fun> {
+pub fn pfun<'a>() -> impl Parser<'a, Fun> {
     let fun_binding = pleft(pthen(pstring(FUN), pws()));
     let fun_binding = pright(pthen(fun_binding, pidentifier()));
     let fun_binding = pleft(pthen(fun_binding, pws()));
