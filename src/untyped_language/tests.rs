@@ -245,3 +245,39 @@ fn test_call() {
     ));
     assert_eq!(result, expected);
 }
+
+#[test]
+fn test_call_recur() {
+    let parser = pcall();
+    let result = parser.parse("left(a,left(b, c))".into());
+    let expected = Ok((
+        Token {
+            value: Expr::Call(
+                Token::new("left".to_string(), 0, 4),
+                vec![
+                    Token::new(Expr::Ident("a".to_string()), 5, 1),
+                    Token::new(
+                        Expr::Call(
+                            Token::new("left".to_string(), 7, 4),
+                            vec![
+                                Token::new(Expr::Ident("b".to_string()), 12, 1),
+                                Token::new(Expr::Ident("c".to_string()), 15, 1),
+                            ],
+                        ),
+                        7,
+                        9,
+                    ),
+                ],
+            ),
+            start: 0,
+            length: 16,
+        },
+        ContinuationState {
+            remaining: "",
+            position: 18,
+            line_number: 0,
+            line_position: 18,
+        },
+    ));
+    assert_eq!(result, expected);
+}
