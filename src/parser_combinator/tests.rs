@@ -247,11 +247,10 @@ fn test_correct_line_number_on_error() {
     assert_eq!(result, expected);
 }
 
-/*
 #[test]
 fn test_pchoice_success() {
-    let parser = pchoice!(pchar('a'), pchar('b'));
-    let result = parser("a".into());
+    let parser = pchoice(vec![pchar('a'), pchar('b')]);
+    let result = parser.parse("a".into());
     let expected = Ok((
         Token {
             value: 'a',
@@ -270,11 +269,25 @@ fn test_pchoice_success() {
 
 #[test]
 fn test_pchoice_fail() {
-    let parser = pchoice!(pchar('a'), pchar('b'));
-    let result = parser("c".into());
+    let parser = pchoice(vec![pchar('a'), pchar('b')]);
+    let result = parser.parse("c".into());
     let expected = Err(Error::new("a or b".to_string(), "c".to_string(), 0, 0, 0));
     assert_eq!(result, expected);
-}*/
+}
+
+#[test]
+fn test_pchoice_fail_macro() {
+    let parser = pchoice!(pchar('a'), pchar('b'), pchar('c'));
+    let result = parser.parse("d".into());
+    let expected = Err(Error::new(
+        "a or b or c".to_string(),
+        "d".to_string(),
+        0,
+        0,
+        0,
+    ));
+    assert_eq!(result, expected);
+}
 
 #[test]
 fn test_pany_success() {

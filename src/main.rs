@@ -2,15 +2,15 @@ use ngl::parser_combinator::*;
 use ngl::untyped_language::*;
 
 fn main() {
-    let fun_binding = pfun();
+    let fun_binding = pmany(pfun());
 
     let start = std::time::Instant::now();
 
     let result = fun_binding.parse(
-        "fun name(param: type, paramx: typex) {
+        "fun name(param: type, param_x: type_x) {
             let x = 1;
-            call(x, y, 3);
-            let result = x;
+            call(x, param, function(3,4));
+            
         }"
         .into(),
     );
