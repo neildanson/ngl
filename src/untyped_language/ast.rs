@@ -4,6 +4,7 @@ use crate::parser_combinator::Token;
 pub enum Value {
     Number(i32),
     Bool(bool),
+    String(String),
 }
 
 #[derive(Debug, Clone, PartialEq)]

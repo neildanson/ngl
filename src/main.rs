@@ -9,7 +9,7 @@ fn main() {
     let result = fun_binding.parse(
         "fun name(param: type, param_x: type_x) -> unit {
             let x = 1;
-            call(x, param, function(3,4));
+            call(x, param, function(param_x,4));
             
         }"
         .into(),

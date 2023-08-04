@@ -46,8 +46,17 @@ fn pbool<'a>() -> impl Parser<'a, Value> {
     pmap(por(ptrue, pfalse), Value::Bool)
 }
 
+fn pquoted_string<'a>() -> impl Parser<'a, Expr> {
+    let pquote = pchar('"');
+    let pstring = pmany(pnone_of(&['"']));
+    let pquote = pchar('"');
+    pmap(pbetween(pquote, pstring, pquote), |string| {
+        Expr::Value(Value::String(string.value))
+    })
+}
+
 fn pvalue<'a>() -> impl Parser<'a, Value> {
-    por(pint(), pbool())
+    pchoice!(pint(), pbool(), pquoted_string())
 }
 
 //TODO disallow reserved words
