@@ -105,10 +105,10 @@ pub fn plet<'a>() -> impl Parser<'a, ExprOrStatement> {
 }
 
 pub fn pexpr<'a>() -> impl Parser<'a, Expr> {
-    let ident = pmap(pidentifier(), Expr::Ident);
+    //let ident = pmap(pidentifier(), Expr::Ident);
     let value = pmap(pvalue(), Expr::Value);
-    pchoice_macro!(value, ident)
-    //por(value, ident)
+    pchoice_macro!(value, pcall()) //, pmap(pidentifier(), Expr::Ident))
+                                   //por(value, ident)
 }
 
 pub fn pcall<'a>() -> impl Parser<'a, Expr> {

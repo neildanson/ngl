@@ -17,7 +17,7 @@ where
     _phantom: std::marker::PhantomData<&'a Output>,
 }
 
-impl<'a, Output:Clone + 'a, F:Clone> ClosureParser<'a, Output, F>
+impl<'a, Output: Clone + 'a, F: Clone> ClosureParser<'a, Output, F>
 where
     F: Fn(ContinuationState<'a>) -> ParseResult<'a, Output>,
 {
