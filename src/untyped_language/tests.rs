@@ -43,6 +43,26 @@ fn test_pint_2() {
 }
 
 #[test]
+fn test_pquoted() {
+    let parser = pquoted_string();
+    let result = parser.parse("\"123\"".into());
+    let expected = Ok((
+        Token {
+            value: Value::String("123".to_string()),
+            start: 1,
+            length: 3,
+        },
+        ContinuationState {
+            remaining: "",
+            position: 5,
+            line_number: 0,
+            line_position: 5,
+        },
+    ));
+    assert_eq!(result, expected);
+}
+
+#[test]
 fn test_param() {
     let parser = pparam();
     let result = parser.parse("left : right".into());

@@ -46,7 +46,7 @@ fn pbool<'a>() -> impl Parser<'a, Value> {
     pmap(por(ptrue, pfalse), Value::Bool)
 }
 
-fn pquoted_string<'a>() -> impl Parser<'a, Value> {
+pub fn pquoted_string<'a>() -> impl Parser<'a, Value> {
     let pquote = pchar('"');
     let pstring = pright(pthen(pquote.clone(), ptake_until(pquote)));
     pmap(pstring, |string| Value::String(string.to_string()))

@@ -304,25 +304,25 @@ fn pchoice_impl<'a, T>(
     Err(error)
 }
 
+//TODO deal with case where string is never termianted
 fn ptakeuntil_impl<'a, T>(
     until: impl Parser<'a, T>,
+    start: Option<ContinuationState<'a>>,
     input: ContinuationState<'a>,
-) -> ParseResult<&'a str> {
+) -> ParseResult<'a, &'a str> {
     let result = until.parse(input);
-
+    let start = start.unwrap_or(input);
     match result {
         Ok((_, cont)) => {
-            //When we hit OK, then we terminate
-            let len = cont.position - input.position;
+            let len = cont.position - start.position - 1;
             return Ok((
-                Token::new(&input.remaining[0..len], input.position, len),
+                Token::new(&start.remaining[0..len], start.position, len),
                 cont,
             ));
         }
         Err(_) => {
-            //otherwise =
             let cont = input.advance(1, 0); //TODO line advances
-            return ptakeuntil_impl(until, cont);
+            return ptakeuntil_impl(until, Some(start), cont);
         }
     }
 }
@@ -426,7 +426,7 @@ pub fn pchoice<'a, T: Clone + 'a>(parsers: Vec<impl Parser<'a, T>>) -> impl Pars
 }
 
 pub fn ptake_until<'a, T: Clone + 'a>(until: impl Parser<'a, T>) -> impl Parser<'a, &'a str> {
-    ClosureParser::new(move |input| ptakeuntil_impl(until.clone(), input))
+    ClosureParser::new(move |input| ptakeuntil_impl(until.clone(), None, input))
 }
 
 #[macro_export]
