@@ -37,7 +37,7 @@ fn test_pchar_success() {
 
 #[test]
 fn test_pthen_success_1() {
-    let parser = pthen(pchar('H'), pchar('e'));
+    let parser = pchar('H').then(pchar('e'));
     let result = parser.parse("Hello".into());
     let expected = Ok((
         Token {
