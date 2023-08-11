@@ -5,8 +5,18 @@ use crate::{
 
 pub type ParseResult<'a, Output> = Result<(Token<Output>, ContinuationState<'a>), Error>;
 
-pub trait Parser<'a, Output>: Clone {
+pub trait Parser<'a, Output: Clone + 'a>: Clone {
     fn parse(&self, input: ContinuationState<'a>) -> ParseResult<'a, Output>;
+
+    fn then<NextOutput: Clone + 'a>(
+        self,
+        next: impl Parser<'a, NextOutput> + 'a,
+    ) -> impl Parser<'a, (Token<Output>, Token<NextOutput>)>
+    where
+        Self: Sized + 'a,
+    {
+        pthen(self, next)
+    }
 }
 #[derive(Clone)]
 struct ClosureParser<'a, Output, F>
@@ -100,7 +110,7 @@ fn pstring_impl<'a>(value: &'a str, input: ContinuationState<'a>) -> ParseResult
     }
 }
 
-fn pthen_impl<'a, T, U>(
+fn pthen_impl<'a, T: Clone + 'a, U: Clone + 'a>(
     parser1: impl Parser<'a, T>,
     parser2: impl Parser<'a, U>,
     input: ContinuationState<'a>,
@@ -120,7 +130,7 @@ fn pthen_impl<'a, T, U>(
     })
 }
 
-pub fn por_impl<'a, T>(
+pub fn por_impl<'a, T: Clone + 'a>(
     parser1: impl Parser<'a, T>,
     parser2: impl Parser<'a, T>,
     input: ContinuationState<'a>,
@@ -144,7 +154,7 @@ pub fn por_impl<'a, T>(
     })
 }
 
-fn poptional_impl<'a, T>(
+fn poptional_impl<'a, T: Clone + 'a>(
     parser: impl Parser<'a, T>,
     input: ContinuationState<'a>,
 ) -> ParseResult<'a, Option<T>> {
@@ -158,7 +168,7 @@ fn poptional_impl<'a, T>(
     }
 }
 
-fn pmap_impl<'a, T, U, F>(
+fn pmap_impl<'a, T: Clone + 'a, U, F>(
     parser: impl Parser<'a, T>,
     f: F,
     input: ContinuationState<'a>,
@@ -210,7 +220,7 @@ fn pany_impl<'a>(valid_chars: &[char], input: ContinuationState<'a>) -> ParseRes
     ))
 }
 
-fn pmany_impl<'a, T>(
+fn pmany_impl<'a, T: Clone + 'a>(
     parser: impl Parser<'a, T>,
     input: ContinuationState<'a>,
 ) -> ParseResult<'a, Vec<Token<T>>> {
@@ -237,7 +247,7 @@ fn pmany_impl<'a, T>(
     }
 }
 
-fn pleft_impl<'a, T, U>(
+fn pleft_impl<'a, T: Clone + 'a, U: Clone + 'a>(
     parser: impl Parser<'a, (Token<T>, Token<U>)>,
     input: ContinuationState<'a>,
 ) -> ParseResult<'a, T> {
@@ -248,7 +258,7 @@ fn pleft_impl<'a, T, U>(
     })
 }
 
-fn pright_impl<'a, T, U>(
+fn pright_impl<'a, T: Clone + 'a, U: Clone + 'a>(
     parser: impl Parser<'a, (Token<T>, Token<U>)>,
     input: ContinuationState<'a>,
 ) -> ParseResult<'a, U> {
@@ -259,7 +269,7 @@ fn pright_impl<'a, T, U>(
     })
 }
 
-fn p1_impl<'a, T>(
+fn p1_impl<'a, T: Clone + 'a>(
     parser: impl Parser<'a, Vec<Token<T>>>,
     input: ContinuationState<'a>,
 ) -> ParseResult<'a, Vec<Token<T>>> {
@@ -282,7 +292,7 @@ fn p1_impl<'a, T>(
     }
 }
 
-fn pchoice_impl<'a, T>(
+fn pchoice_impl<'a, T: Clone + 'a>(
     parsers: Vec<impl Parser<'a, T>>,
     input: ContinuationState<'a>,
 ) -> ParseResult<'a, T> {
@@ -305,7 +315,7 @@ fn pchoice_impl<'a, T>(
 }
 
 //TODO deal with case where string is never termianted
-fn ptakeuntil_impl<'a, T>(
+fn ptakeuntil_impl<'a, T: Clone + 'a>(
     until: impl Parser<'a, T>,
     start: Option<ContinuationState<'a>>,
     input: ContinuationState<'a>,
@@ -358,7 +368,7 @@ pub fn pany(valid_chars: &[char]) -> impl Parser<char> {
     ClosureParser::new(move |input| pany_impl(valid_chars, input))
 }
 
-pub fn pmap<'a, T: 'a, U: Clone + 'a, F>(
+pub fn pmap<'a, T: Clone + 'a, U: Clone + 'a, F>(
     parser: impl Parser<'a, T> + 'a,
     f: F,
 ) -> impl Parser<'a, U>
