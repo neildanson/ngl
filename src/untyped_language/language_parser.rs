@@ -133,7 +133,7 @@ pub fn pcall<'a>() -> impl Parser<'a, Expr> {
 }
 
 pub fn pbody<'a>() -> impl Parser<'a, Vec<Token<ExprOrStatement>>> {
-    let plbrace = pleft(pthen(pchar('{'), pws()));
+    let plbrace = pleft(pchar('{').then(pws()));
     let prbrace = pleft(pthen(pchar('}'), pws()));
 
     let call = pmap(pcall(), |call| ExprOrStatement::Expr(call));

@@ -17,7 +17,83 @@ pub trait Parser<'a, Output: Clone + 'a>: Clone {
     {
         pthen(self, next)
     }
+
+    fn or(self, next: impl Parser<'a, Output> + 'a) -> impl Parser<'a, Output>
+    where
+        Self: Sized + 'a,
+    {
+        por(self, next)
+    }
+
+    fn optional(self) -> impl Parser<'a, Option<Output>>
+    where
+        Self: Sized + 'a,
+    {
+        poptional(self)
+    }
+
+    fn map<NextOutput: Clone + 'a, F: Fn(Output) -> NextOutput + 'a>(
+        self,
+        f: F,
+    ) -> impl Parser<'a, NextOutput>
+    where
+        Self: Sized + 'a,
+        F: Fn(Output) -> NextOutput,
+        F: Clone,
+    {
+        pmap(self, f)
+    }
+
+    fn many(self) -> impl Parser<'a, Vec<Token<Output>>>
+    where
+        Self: Sized + 'a,
+    {
+        pmany(self)
+    }
+
+    fn take_until(self) -> impl Parser<'a, &'a str>
+    where
+        Self: Sized + 'a,
+    {
+        ptake_until(self)
+    }
+
+    fn any(valid_chars: &'a [char]) -> impl Parser<'a, char>
+    where
+        Self: Sized + 'a,
+    {
+        pany(valid_chars)
+    }
+
+    /*
+    fn at_least_one(self) -> impl Parser<'a, Vec<Token<Output>>>
+    where
+        Self: Sized + 'a,
+    {
+        p1(self)
+    }
+    */
 }
+
+/*
+impl<'a, Output: Clone + 'a, NextOutput: Clone + 'a> Parser<'a, (Token<Output>, Token<NextOutput>)>  {
+fn left(self) -> impl Parser<'a, Output>
+where
+    Self: Sized + 'a,
+{
+    pleft(self)
+}
+
+fn right(self) -> impl Parser<'a, NextOutput>
+where
+    Self: Sized + 'a,
+{
+    pright(self)
+}
+
+//between
+}
+*/
 #[derive(Clone)]
 struct ClosureParser<'a, Output, F>
 where
