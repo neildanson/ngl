@@ -73,6 +73,14 @@ pub fn pws<'a>() -> impl Parser<'a, Vec<Token<char>>> {
     pany(&WS).many()
 }
 
+fn pchar_ws<'a>(c: char) -> impl Parser<'a, char> {
+    pleft(pchar(c).then(pws()))
+}
+
+fn pstring_ws(s: &str) -> impl Parser<&str> {
+    pleft(pstring(s).then(pws()))
+}
+
 pub fn pterminator<'a>() -> impl Parser<'a, ()> {
     let psemi = pchar(';').map(|_| ());
     pleft(psemi.then(pws()))
@@ -80,17 +88,16 @@ pub fn pterminator<'a>() -> impl Parser<'a, ()> {
 
 pub fn pparam<'a>() -> impl Parser<'a, Parameter> {
     let param_binding = pleft(pidentifier().then(pws()));
-    let param_binding = pleft(param_binding.then(pchar(':')));
-    let param_binding = pleft(param_binding.then(pws()));
+    let param_binding = pleft(param_binding.then(pchar_ws(':')));
     let param_binding = param_binding.then(pidentifier());
     let param_binding = pleft(param_binding.then(pws()));
     param_binding.map(|(name, type_)| Parameter(name, type_))
 }
 
 pub fn pparams<'a>() -> impl Parser<'a, Vec<Token<Parameter>>> {
-    let lparen = pleft(pchar('(').then(pws()));
-    let rparen = pleft(pchar(')').then(pws()));
-    let comma = pleft(pchar(',').then(pws()));
+    let lparen = pchar_ws('(');
+    let rparen = pchar_ws(')');
+    let comma = pchar_ws(',');
 
     let param_list = pparam().sep_by(comma);
 
@@ -98,11 +105,10 @@ pub fn pparams<'a>() -> impl Parser<'a, Vec<Token<Parameter>>> {
 }
 
 pub fn plet<'a>() -> impl Parser<'a, ExprOrStatement> {
-    let let_binding = pleft(pstring("let").then(pws()));
+    let let_binding = pstring_ws("let");
     let let_binding = pright(let_binding.then(pidentifier()));
     let let_binding = pleft(let_binding.then(pws()));
-    let let_binding = pleft(let_binding.then(pchar('=')));
-    let let_binding = pleft(let_binding.then(pws()));
+    let let_binding = pleft(let_binding.then(pchar_ws('=')));
     let let_binding = let_binding.then(pexpr());
     let let_binding = pleft(let_binding.then(pws()));
     let_binding.map(|(name, value)| ExprOrStatement::Statement(Statement::Let(name, value)))
@@ -115,12 +121,12 @@ pub fn pexpr<'a>() -> impl Parser<'a, Expr> {
 
 pub fn pcall<'a>() -> impl Parser<'a, Expr> {
     let call_binding = pleft(pidentifier().then(pws()));
-    let lparen = pleft(pchar('(').then(pws()));
-    let rparen = pleft(pchar(')').then(pws()));
+    let lparen = pchar_ws('(');
+    let rparen = pchar_ws(')');
 
     let expr = pexpr();
 
-    let params = expr.sep_by(pleft(pchar(',').then(pws())));
+    let params = expr.sep_by(pchar_ws(','));
     let params = pbetween(lparen, params, rparen);
 
     let call_binding = call_binding.then(params);
@@ -129,11 +135,11 @@ pub fn pcall<'a>() -> impl Parser<'a, Expr> {
 }
 
 pub fn pbody<'a>() -> impl Parser<'a, Vec<Token<ExprOrStatement>>> {
-    let plbrace = pleft(pchar('{').then(pws()));
-    let prbrace = pleft(pchar('}').then(pws()));
+    let plbrace = pchar_ws('{');
+    let prbrace = pchar_ws('}');
 
     let call = pcall().map(|call| ExprOrStatement::Expr(call));
-    let expr_or_statement = por(call, plet());
+    let expr_or_statement = call.or(plet());
     let expr_or_statement = pleft(expr_or_statement.then(pterminator()));
 
     let pexprorstatement = expr_or_statement.many();
@@ -141,13 +147,12 @@ pub fn pbody<'a>() -> impl Parser<'a, Vec<Token<ExprOrStatement>>> {
 }
 
 pub fn pfun<'a>() -> impl Parser<'a, Fun> {
-    let fun_binding = pleft(pstring(FUN).then(pws()));
+    let fun_binding = pstring_ws(FUN);
     let fun_binding = pright(fun_binding.then(pidentifier()));
     let fun_binding = pleft(fun_binding.then(pws()));
     let fun_binding = fun_binding.then(pparams());
     let fun_binding = pleft(fun_binding.then(pws()));
-    let fun_binding = pleft(fun_binding.then(pstring("->")));
-    let fun_binding = pleft(fun_binding.then(pws()));
+    let fun_binding = pleft(fun_binding.then(pstring_ws("->")));
     let fun_binding = fun_binding.then(pidentifier());
     let fun_binding = pleft(fun_binding.then(pws()));
     let fun_binding = fun_binding.then(pbody());

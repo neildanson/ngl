@@ -7,7 +7,6 @@ pub type ParseResult<'a, Output> = Result<(Token<Output>, ContinuationState<'a>)
 
 pub trait Parser<'a, Output: Clone + 'a>: Clone {
     fn parse(&self, input: ContinuationState<'a>) -> ParseResult<'a, Output>;
-
     fn then<NextOutput: Clone + 'a>(
         self,
         next: impl Parser<'a, NextOutput> + 'a,
@@ -92,25 +91,6 @@ pub trait Parser<'a, Output: Clone + 'a>: Clone {
     */
 }
 
-/*
-impl<'a, Output: Clone + 'a, NextOutput: Clone + 'a> Parser<'a, (Token<Output>, Token<NextOutput>)>  {
-fn left(self) -> impl Parser<'a, Output>
-where
-    Self: Sized + 'a,
-{
-    pleft(self)
-}
-
-fn right(self) -> impl Parser<'a, NextOutput>
-where
-    Self: Sized + 'a,
-{
-    pright(self)
-}
-
-//between
-}
-*/
 #[derive(Clone)]
 struct ClosureParser<'a, Output, F>
 where
@@ -126,6 +106,20 @@ where
 {
     pub fn new(parser: F) -> impl Parser<'a, Output> {
         parser_from_fn(parser)
+    }
+}
+
+impl<'a, Left: Clone + 'a, Right: Clone + 'a, F: Clone + 'a>
+    ClosureParser<'a, (Token<Left>, Token<Right>), F>
+where
+    F: Fn(ContinuationState<'a>) -> ParseResult<'a, (Token<Left>, Token<Right>)>,
+{
+    fn left(self) -> impl Parser<'a, Left> {
+        pleft(self)
+    }
+
+    fn right(self) -> impl Parser<'a, Right> {
+        pright(self)
     }
 }
 
@@ -223,7 +217,7 @@ fn pthen_impl<'a, T: Clone + 'a, U: Clone + 'a>(
     })
 }
 
-pub fn por_impl<'a, T: Clone + 'a>(
+fn por_impl<'a, T: Clone + 'a>(
     parser1: impl Parser<'a, T>,
     parser2: impl Parser<'a, T>,
     input: ContinuationState<'a>,
