@@ -422,7 +422,7 @@ pub fn pstring(value: &str) -> impl Parser<&str> {
     ClosureParser::new(move |input| pstring_impl(value, input))
 }
 
-pub fn pthen<'a, T: Clone + 'a, U: Clone + 'a>(
+fn pthen<'a, T: Clone + 'a, U: Clone + 'a>(
     parser1: impl Parser<'a, T> + 'a,
     parser2: impl Parser<'a, U> + 'a,
 ) -> impl Parser<'a, (Token<T>, Token<U>)> {
@@ -436,7 +436,7 @@ pub fn por<'a, T: Clone + 'a>(
     ClosureParser::new(move |input| por_impl(parser1.clone(), parser2.clone(), input))
 }
 
-pub fn poptional<'a, T: Clone + 'a>(parser: impl Parser<'a, T> + 'a) -> impl Parser<'a, Option<T>> {
+fn poptional<'a, T: Clone + 'a>(parser: impl Parser<'a, T> + 'a) -> impl Parser<'a, Option<T>> {
     ClosureParser::new(move |input| poptional_impl(parser.clone(), input))
 }
 
@@ -444,7 +444,7 @@ pub fn pany(valid_chars: &[char]) -> impl Parser<char> {
     ClosureParser::new(move |input| pany_impl(valid_chars, input))
 }
 
-pub fn pmap<'a, T: Clone + 'a, U: Clone + 'a, F>(
+fn pmap<'a, T: Clone + 'a, U: Clone + 'a, F>(
     parser: impl Parser<'a, T> + 'a,
     f: F,
 ) -> impl Parser<'a, U>
@@ -455,7 +455,7 @@ where
     ClosureParser::new(move |input| pmap_impl(parser.clone(), f.clone(), input))
 }
 
-pub fn pmany<'a, T: Clone + 'a>(parser: impl Parser<'a, T> + 'a) -> impl Parser<'a, Vec<Token<T>>> {
+fn pmany<'a, T: Clone + 'a>(parser: impl Parser<'a, T> + 'a) -> impl Parser<'a, Vec<Token<T>>> {
     ClosureParser::new(move |input| pmany_impl(parser.clone(), input))
 }
 

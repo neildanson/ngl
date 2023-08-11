@@ -57,7 +57,7 @@ fn test_pthen_success_1() {
 
 #[test]
 fn test_pthen_success_2() {
-    let parser = pthen(pchar('H'), pchar('e'));
+    let parser = pchar('H').then(pchar('e'));
     let result = parser.parse("He".into());
     let expected = Ok((
         Token {
@@ -77,7 +77,7 @@ fn test_pthen_success_2() {
 
 #[test]
 fn test_por_success_1() {
-    let parser = por(pchar('H'), pchar('h'));
+    let parser = pchar('H').or(pchar('h'));
     let result = parser.parse("H".into());
     let expected = Ok((
         Token {
@@ -97,7 +97,7 @@ fn test_por_success_1() {
 
 #[test]
 fn test_por_success_2() {
-    let parser = por(pchar('H'), pchar('h'));
+    let parser = pchar('H').or(pchar('h'));
     let result = parser.parse("h".into());
     let expected = Ok((
         Token {
@@ -117,7 +117,7 @@ fn test_por_success_2() {
 
 #[test]
 fn test_por_success_fail() {
-    let parser = por(pchar('H'), pchar('h'));
+    let parser = pchar('H').or(pchar('h'));
     let result = parser.parse("e".into());
     let expected = Err(Error::new("H or h".to_string(), "e".to_string(), 0, 0, 0));
     assert_eq!(result, expected);
@@ -125,7 +125,7 @@ fn test_por_success_fail() {
 
 #[test]
 fn test_pmap_success() {
-    let parser = pmap(pchar('T'), |_| true);
+    let parser = pchar('T').map(|_| true);
     let result = parser.parse("T".into());
     let expected = Ok((
         Token {
@@ -145,7 +145,7 @@ fn test_pmap_success() {
 
 #[test]
 fn test_poptional_success() {
-    let parser = poptional(pchar('T'));
+    let parser = pchar('T').optional();
     let result: ParseResult<Option<char>> = parser.parse("T".into());
     let expected = Ok((
         Token {
@@ -165,7 +165,7 @@ fn test_poptional_success() {
 
 #[test]
 fn test_poptional_success_with_failure() {
-    let parser = poptional(pchar('h'));
+    let parser = pchar('h').optional();
     let result = parser.parse("T".into());
     let expected: ParseResult<Option<char>> = Ok((
         Token {
@@ -202,8 +202,8 @@ fn test_pstring_wrong_letter() {
 
 #[test]
 fn test_pstring_wrong_letter_after_other_parse() {
-    let parser1 = pthen(pchar('c'), pchar('w'));
-    let parser = pthen(parser1, pstring("Hello"));
+    let parser1 = pchar('c').then(pchar('w'));
+    let parser = parser1.then(pstring("Hello"));
     let result = parser.parse("cwrong".into());
     let expected = Err(Error::new("Hello".to_string(), "r".to_string(), 2, 0, 2));
     assert_eq!(result, expected);
@@ -231,8 +231,8 @@ fn test_pstring_success() {
 
 #[test]
 fn test_pchar_followed_by_pstring_followed_by_failure() {
-    let parser1 = pthen(pchar('c'), pstring("Hello"));
-    let parser = pthen(parser1, pchar('w'));
+    let parser1 = pchar('c').then(pstring("Hello"));
+    let parser = parser1.then(pchar('w'));
     let result = parser.parse("cHelloX".into());
     let expected = Err(Error::new("w".to_string(), "X".to_string(), 6, 0, 6));
     assert_eq!(result, expected);
@@ -240,8 +240,8 @@ fn test_pchar_followed_by_pstring_followed_by_failure() {
 
 #[test]
 fn test_correct_line_number_on_error() {
-    let parser = pthen(pchar('\n'), pchar('\n'));
-    let parser = pthen(parser, pchar('a'));
+    let parser = pchar('\n').then(pchar('\n'));
+    let parser = parser.then(pchar('a'));
     let result = parser.parse("\n\nb".into());
     let expected = Err(Error::new("a".to_string(), "b".to_string(), 2, 2, 0));
     assert_eq!(result, expected);
@@ -325,7 +325,7 @@ fn test_pany_fail() {
 
 #[test]
 fn test_pmany_0() {
-    let parser = pmany(pchar('a'));
+    let parser = pchar('a').many();
     let result = parser.parse("b".into());
     let expected = Ok((
         Token {
@@ -345,7 +345,7 @@ fn test_pmany_0() {
 
 #[test]
 fn test_pmany_1() {
-    let parser = pmany(pchar('a'));
+    let parser = pchar('a').many();
     let result = parser.parse("aaaa".into());
     let expected = Ok((
         Token {
@@ -370,7 +370,7 @@ fn test_pmany_1() {
 
 #[test]
 fn test_pmany_2() {
-    let parser = pmany(pchar('a'));
+    let parser = pchar('a').many();
     let result = parser.parse("aaab".into());
     let expected = Ok((
         Token {
@@ -394,7 +394,7 @@ fn test_pmany_2() {
 
 #[test]
 fn test_between() {
-    let parser = pbetween(pchar('('), pmany(pchar('a')), pchar(')'));
+    let parser = pbetween(pchar('('), pchar('a').many(), pchar(')'));
     let result = parser.parse("(aaa)".into());
     let expected = Ok((
         Token {

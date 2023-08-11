@@ -2,7 +2,7 @@ use ngl::parser_combinator::*;
 use ngl::untyped_language::*;
 
 fn main() {
-    let fun_binding = pmany(pfun());
+    let fun_binding = pfun().many();
 
     let start = std::time::Instant::now();
 
