@@ -418,7 +418,7 @@ fn test_between() {
 
 #[test]
 fn test_pmany1() {
-    let parser = pmany1(pchar('1'));
+    let parser = pchar('1').many1();
     let result = parser.parse("0".into());
     let expected = Err(Error::new(
         "1 or more".to_string(),

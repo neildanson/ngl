@@ -27,7 +27,7 @@ const WS: [char; 4] = [' ', '\n', '\t', '\r'];
 
 pub(crate) fn pint<'a>() -> impl Parser<'a, Value> {
     let any_number = pany(&NUMBERS);
-    let many_numbers = pmany1(any_number);
+    let many_numbers = any_number.many1();
     let number_parser = pchar('-').optional().then(many_numbers);
     let pnumber = number_parser.map(move |(negate, value)| {
         let string: String = value.value.into_iter().map(|c| c.value).collect();

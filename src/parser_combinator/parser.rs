@@ -51,6 +51,13 @@ pub trait Parser<'a, Output: Clone + 'a>: Clone {
         pmany(self)
     }
 
+    fn many1(self) -> impl Parser<'a, Vec<Token<Output>>>
+    where
+        Self: Sized + 'a,
+    {
+        pmany1(self)
+    }
+
     fn take_until(self) -> impl Parser<'a, &'a str>
     where
         Self: Sized + 'a,
@@ -501,9 +508,7 @@ pub fn psepby<'a, T: Clone + 'a, U: Clone + 'a>(
     parser
 }
 
-pub fn pmany1<'a, T: Clone + 'a>(
-    parser: impl Parser<'a, T> + 'a,
-) -> impl Parser<'a, Vec<Token<T>>> {
+fn pmany1<'a, T: Clone + 'a>(parser: impl Parser<'a, T> + 'a) -> impl Parser<'a, Vec<Token<T>>> {
     p1(pmany(parser))
 }
 
@@ -511,7 +516,7 @@ pub fn pchoice<'a, T: Clone + 'a>(parsers: Vec<impl Parser<'a, T>>) -> impl Pars
     ClosureParser::new(move |input| pchoice_impl(parsers.clone(), input))
 }
 
-pub fn ptake_until<'a, T: Clone + 'a>(until: impl Parser<'a, T>) -> impl Parser<'a, &'a str> {
+fn ptake_until<'a, T: Clone + 'a>(until: impl Parser<'a, T>) -> impl Parser<'a, &'a str> {
     ClosureParser::new(move |input| ptakeuntil_impl(until.clone(), None, input))
 }
 
