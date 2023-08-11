@@ -72,6 +72,16 @@ pub trait Parser<'a, Output: Clone + 'a>: Clone {
         pany(valid_chars)
     }
 
+    fn sep_by<Seperator: Clone + 'a>(
+        self,
+        separator: impl Parser<'a, Seperator> + 'a,
+    ) -> impl Parser<'a, Vec<Token<Output>>>
+    where
+        Self: Sized + 'a,
+    {
+        psepby(self, separator)
+    }
+
     /*
     fn at_least_one(self) -> impl Parser<'a, Vec<Token<Output>>>
     where
@@ -494,7 +504,7 @@ pub fn p1<'a, T: Clone + 'a>(
     ClosureParser::new(move |input| p1_impl(parser.clone(), input))
 }
 
-pub fn psepby<'a, T: Clone + 'a, U: Clone + 'a>(
+fn psepby<'a, T: Clone + 'a, U: Clone + 'a>(
     parser: impl Parser<'a, T> + 'a,
     separator: impl Parser<'a, U> + 'a,
 ) -> impl Parser<'a, Vec<Token<T>>> {

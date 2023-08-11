@@ -92,7 +92,7 @@ pub fn pparams<'a>() -> impl Parser<'a, Vec<Token<Parameter>>> {
     let rparen = pleft(pchar(')').then(pws()));
     let comma = pleft(pchar(',').then(pws()));
 
-    let param_list = psepby(pparam(), comma);
+    let param_list = pparam().sep_by(comma);
 
     pbetween(lparen, param_list, rparen)
 }
@@ -120,7 +120,7 @@ pub fn pcall<'a>() -> impl Parser<'a, Expr> {
 
     let expr = pexpr();
 
-    let params = psepby(expr, pleft(pchar(',').then(pws())));
+    let params = expr.sep_by(pleft(pchar(',').then(pws())));
     let params = pbetween(lparen, params, rparen);
 
     let call_binding = call_binding.then(params);
