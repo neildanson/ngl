@@ -1,5 +1,5 @@
 # ngl
-Next Generation Parser, Runtime in Rust
+Next Generation Parser (for me), Runtime in Rust
 
 # Goals
 
