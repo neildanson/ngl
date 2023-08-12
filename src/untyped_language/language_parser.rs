@@ -101,7 +101,7 @@ pub fn pparams<'a>() -> impl Parser<'a, Vec<Token<Parameter>>> {
 
     let param_list = pparam().sep_by(comma);
 
-    pbetween(lparen, param_list, rparen)
+    param_list.between(lparen, rparen)
 }
 
 pub fn plet<'a>() -> impl Parser<'a, ExprOrStatement> {
@@ -127,7 +127,7 @@ pub fn pcall<'a>() -> impl Parser<'a, Expr> {
     let expr = pexpr();
 
     let params = expr.sep_by(pchar_ws(','));
-    let params = pbetween(lparen, params, rparen);
+    let params = params.between(lparen, rparen);
 
     let call_binding = call_binding.then(params);
     let call_binding = pleft(call_binding.then(pws()));
@@ -143,7 +143,7 @@ pub fn pbody<'a>() -> impl Parser<'a, Vec<Token<ExprOrStatement>>> {
     let expr_or_statement = pleft(expr_or_statement.then(pterminator()));
 
     let pexprorstatement = expr_or_statement.many();
-    pbetween(plbrace, pexprorstatement, prbrace)
+    pexprorstatement.between(plbrace, prbrace)
 }
 
 pub fn pfun<'a>() -> impl Parser<'a, Fun> {

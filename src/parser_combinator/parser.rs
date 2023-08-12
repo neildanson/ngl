@@ -81,6 +81,17 @@ pub trait Parser<'a, Output: Clone + 'a>: Clone {
         psepby(self, separator)
     }
 
+    fn between<Left: Clone + 'a, Right: Clone + 'a>(
+        self,
+        parser1: impl Parser<'a, Left> + 'a,
+        parser2: impl Parser<'a, Right> + 'a,
+    ) -> impl Parser<'a, Output>
+    where
+        Self: Sized + 'a,
+    {
+        pbetween(parser1, self, parser2)
+    }
+
     /*
     fn at_least_one(self) -> impl Parser<'a, Vec<Token<Output>>>
     where
@@ -482,7 +493,7 @@ pub fn pright<'a, T: Clone + 'a, U: Clone + 'a>(
     ClosureParser::new(move |input| pright_impl(parser.clone(), input))
 }
 
-pub fn pbetween<'a, T: Clone + 'a, U: Clone + 'a, V: Clone + 'a>(
+fn pbetween<'a, T: Clone + 'a, U: Clone + 'a, V: Clone + 'a>(
     parser1: impl Parser<'a, T> + 'a,
     parser2: impl Parser<'a, U> + 'a,
     parser3: impl Parser<'a, V> + 'a,

@@ -394,7 +394,7 @@ fn test_pmany_2() {
 
 #[test]
 fn test_between() {
-    let parser = pbetween(pchar('('), pchar('a').many(), pchar(')'));
+    let parser = pchar('a').many().between(pchar('('), pchar(')'));
     let result = parser.parse("(aaa)".into());
     let expected = Ok((
         Token {
