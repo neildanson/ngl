@@ -17,7 +17,7 @@ fn parse_char_success(c: &mut Criterion) {
 }
 
 fn parse_char_fail(c: &mut Criterion) {
-    let truthy_parser = por(pchar('t'), pchar('f'));
+    let truthy_parser = pchar('t').or(pchar('f'));
 
     c.bench_function("Parse Char Fail", |b| {
         b.iter(|| {

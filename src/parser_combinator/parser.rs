@@ -93,6 +93,8 @@ pub trait Parser<'a, Output: Clone + 'a>: Clone {
     }
 
     /*
+    todo - left, right, at_least_one
+
     fn at_least_one(self) -> impl Parser<'a, Vec<Token<Output>>>
     where
         Self: Sized + 'a,
@@ -115,22 +117,8 @@ impl<'a, Output: Clone + 'a, F: Clone> ClosureParser<'a, Output, F>
 where
     F: Fn(ContinuationState<'a>) -> ParseResult<'a, Output>,
 {
-    pub fn new(parser: F) -> impl Parser<'a, Output> {
+    fn new(parser: F) -> impl Parser<'a, Output> {
         parser_from_fn(parser)
-    }
-}
-
-impl<'a, Left: Clone + 'a, Right: Clone + 'a, F: Clone + 'a>
-    ClosureParser<'a, (Token<Left>, Token<Right>), F>
-where
-    F: Fn(ContinuationState<'a>) -> ParseResult<'a, (Token<Left>, Token<Right>)>,
-{
-    fn left(self) -> impl Parser<'a, Left> {
-        pleft(self)
-    }
-
-    fn right(self) -> impl Parser<'a, Right> {
-        pright(self)
     }
 }
 
@@ -451,7 +439,7 @@ fn pthen<'a, T: Clone + 'a, U: Clone + 'a>(
     ClosureParser::new(move |input| pthen_impl(parser1.clone(), parser2.clone(), input))
 }
 
-pub fn por<'a, T: Clone + 'a>(
+fn por<'a, T: Clone + 'a>(
     parser1: impl Parser<'a, T> + 'a,
     parser2: impl Parser<'a, T> + 'a,
 ) -> impl Parser<'a, T> {
