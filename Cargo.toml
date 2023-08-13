@@ -9,8 +9,12 @@ edition = "2021"
 
 [dev-dependencies]
 criterion = "0.5.1"
+wson = "0.1.1"
 
 [[bench]]
 name = "benchmark"
-# path = "benches/benchmark.rs"
+harness = false
+
+[[bench]]
+name = "nom_compare"
 harness = false
