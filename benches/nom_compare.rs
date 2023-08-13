@@ -102,8 +102,7 @@ fn ngl_json_parse(c: &mut Criterion) {
     c.bench_function("Parse JSON NGL", |b| {
         b.iter(|| {
             for _ in 0..50 {
-                let result = black_box(parser.parse(JSON.into()));
-                result.unwrap();
+                let _ = black_box(parser.parse(JSON.into()));
             }
         });
     });
