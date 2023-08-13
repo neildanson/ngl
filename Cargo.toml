@@ -14,3 +14,7 @@ wson = "0.1.1"
 [[bench]]
 name = "benchmark"
 harness = false
+
+[[bench]]
+name = "nom_compare"
+harness = false

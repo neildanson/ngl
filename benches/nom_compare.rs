@@ -18,7 +18,7 @@ const JSON: &str = r#"
 fn nom_json_parse(c: &mut Criterion) {
     c.bench_function("Parse JSON NOM", |b| {
         b.iter(|| {
-            for _ in 0..100 {
+            for _ in 0..50 {
                 let _ = black_box(parse(JSON));
             }
         });
