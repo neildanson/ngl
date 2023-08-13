@@ -3,6 +3,8 @@ use crate::{
     parser_combinator::token::Token,
 };
 
+use std::rc::Rc;
+
 pub type ParseResult<'a, Output> = Result<(Token<Output>, ContinuationState<'a>), Error>;
 
 pub trait Parser<'a, Output: Clone + 'a>: Clone {
@@ -109,7 +111,7 @@ struct ClosureParser<'a, Output, F>
 where
     F: Fn(ContinuationState<'a>) -> ParseResult<'a, Output>,
 {
-    parser: F,
+    parser: Rc<F>,
     _phantom: std::marker::PhantomData<&'a Output>,
 }
 
@@ -122,12 +124,12 @@ where
     }
 }
 
-pub const fn parser_from_fn<'a, Output: Clone + 'a, F: Clone>(parser: F) -> impl Parser<'a, Output>
+pub fn parser_from_fn<'a, Output: Clone + 'a, F: Clone>(parser: F) -> impl Parser<'a, Output>
 where
     F: Fn(ContinuationState<'a>) -> ParseResult<'a, Output>,
 {
     ClosureParser {
-        parser,
+        parser: Rc::new(parser),
         _phantom: std::marker::PhantomData,
     }
 }
