@@ -254,8 +254,8 @@ fn poptional_impl<'a, T: Clone + 'a>(
 }
 
 fn pmap_impl<'a, T: Clone + 'a, U, F>(
-    parser: impl Parser<'a, T>,
-    f: F,
+    parser: &impl Parser<'a, T>,
+    f: &F,
     input: ContinuationState<'a>,
 ) -> ParseResult<'a, U>
 where
@@ -306,7 +306,7 @@ fn pany_impl<'a>(valid_chars: &[char], input: ContinuationState<'a>) -> ParseRes
 }
 
 fn pmany_impl<'a, T: Clone + 'a>(
-    parser: impl Parser<'a, T>,
+    parser: &impl Parser<'a, T>,
     input: ContinuationState<'a>,
 ) -> ParseResult<'a, Vec<Token<T>>> {
     let mut results = Vec::new();
@@ -535,6 +535,28 @@ pub fn pany(valid_chars: &[char]) -> impl Parser<char> {
     ClosureParser::new(move |input| pany_impl(valid_chars, input))
 }
 
+#[derive(Clone)]
+struct MapParser<'a, T: Clone + 'a, U: Clone + 'a, P: Parser<'a, T>, F>
+where
+    F: Fn(T) -> U,
+    F: Clone + 'a,
+{
+    parser: P,
+    f: F,
+    _phantom: std::marker::PhantomData<&'a (T, U)>,
+}
+
+impl<'a, T: Clone + 'a, U: Clone + 'a, P: Parser<'a, T>, F> Parser<'a, U>
+    for MapParser<'a, T, U, P, F>
+where
+    F: Fn(T) -> U,
+    F: Clone + 'a,
+{
+    fn parse(&self, input: ContinuationState<'a>) -> ParseResult<'a, U> {
+        pmap_impl(&self.parser, &self.f, input)
+    }
+}
+
 fn pmap<'a, T: Clone + 'a, U: Clone + 'a, F>(
     parser: impl Parser<'a, T> + 'a,
     f: F,
@@ -543,11 +565,36 @@ where
     F: Fn(T) -> U,
     F: Clone + 'a,
 {
-    ClosureParser::new(move |input| pmap_impl(parser.clone(), f.clone(), input))
+    MapParser {
+        parser,
+        f,
+        _phantom: std::marker::PhantomData,
+    }
+}
+
+#[derive(Clone)]
+struct ManyParser<'a, T: Clone + 'a, P: Parser<'a, T>> {
+    parser: P,
+    _phantom: std::marker::PhantomData<&'a T>,
+}
+
+impl<'a, T, P> Parser<'a, Vec<Token<T>>> for ManyParser<'a, T, P>
+where
+    T: Clone + 'a,
+    P: Parser<'a, T>,
+{
+    fn parse(&self, input: ContinuationState<'a>) -> ParseResult<'a, Vec<Token<T>>> {
+        pmany_impl(&self.parser, input)
+    }
 }
 
 fn pmany<'a, T: Clone + 'a>(parser: impl Parser<'a, T> + 'a) -> impl Parser<'a, Vec<Token<T>>> {
-    ClosureParser::new(move |input| pmany_impl(parser.clone(), input))
+    {
+        ManyParser {
+            parser,
+            _phantom: std::marker::PhantomData,
+        }
+    }
 }
 
 pub fn pleft<'a, T: Clone + 'a, U: Clone + 'a>(
