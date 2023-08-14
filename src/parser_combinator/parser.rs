@@ -481,11 +481,32 @@ fn pthen<'a, T: Clone + 'a, U: Clone + 'a>(
     }
 }
 
+#[derive(Clone)]
+struct OrParser<'a, T: Clone + 'a, P1: Parser<'a, T>, P2: Parser<'a, T>> {
+    parser1: P1,
+    parser2: P2,
+    _phantom: std::marker::PhantomData<&'a T>,
+}
+
+impl<'a, T: Clone, P1, P2> Parser<'a, T> for OrParser<'a, T, P1, P2>
+where
+    P1: Parser<'a, T>,
+    P2: Parser<'a, T>,
+{
+    fn parse(&self, input: ContinuationState<'a>) -> ParseResult<'a, T> {
+        por_impl(self.parser1.clone(), self.parser2.clone(), input)
+    }
+}
+
 fn por<'a, T: Clone + 'a>(
     parser1: impl Parser<'a, T> + 'a,
     parser2: impl Parser<'a, T> + 'a,
 ) -> impl Parser<'a, T> {
-    ClosureParser::new(move |input| por_impl(parser1.clone(), parser2.clone(), input))
+    OrParser {
+        parser1,
+        parser2,
+        _phantom: std::marker::PhantomData,
+    }
 }
 
 fn poptional<'a, T: Clone + 'a>(parser: impl Parser<'a, T> + 'a) -> impl Parser<'a, Option<T>> {
