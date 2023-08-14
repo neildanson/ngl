@@ -509,8 +509,26 @@ fn por<'a, T: Clone + 'a>(
     }
 }
 
+#[derive(Clone)]
+struct OptionalParser<'a, T: Clone + 'a, P: Parser<'a, T>> {
+    parser: P,
+    _phantom: std::marker::PhantomData<&'a T>,
+}
+
+impl<'a, T: Clone, P> Parser<'a, Option<T>> for OptionalParser<'a, T, P>
+where
+    P: Parser<'a, T>,
+{
+    fn parse(&self, input: ContinuationState<'a>) -> ParseResult<'a, Option<T>> {
+        poptional_impl(self.parser.clone(), input)
+    }
+}
+
 fn poptional<'a, T: Clone + 'a>(parser: impl Parser<'a, T> + 'a) -> impl Parser<'a, Option<T>> {
-    ClosureParser::new(move |input| poptional_impl(parser.clone(), input))
+    OptionalParser {
+        parser,
+        _phantom: std::marker::PhantomData,
+    }
 }
 
 pub fn pany(valid_chars: &[char]) -> impl Parser<char> {
