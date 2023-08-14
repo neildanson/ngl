@@ -452,11 +452,33 @@ pub fn pstring<'a>(value: &'a str) -> impl Parser<'a, &str> {
     StringParser { value }
 }
 
+#[derive(Clone)]
+struct ThenParser<'a, T: Clone + 'a, U: Clone + 'a, P1: Parser<'a, T>, P2: Parser<'a, U>> {
+    parser1: P1,
+    parser2: P2,
+    _phantom: std::marker::PhantomData<&'a (T, U)>,
+}
+
+impl<'a, T: Clone, U: Clone, P1, P2> Parser<'a, (Token<T>, Token<U>)>
+    for ThenParser<'a, T, U, P1, P2>
+where
+    P1: Parser<'a, T>,
+    P2: Parser<'a, U>,
+{
+    fn parse(&self, input: ContinuationState<'a>) -> ParseResult<'a, (Token<T>, Token<U>)> {
+        pthen_impl(self.parser1.clone(), self.parser2.clone(), input)
+    }
+}
+
 fn pthen<'a, T: Clone + 'a, U: Clone + 'a>(
     parser1: impl Parser<'a, T> + 'a,
     parser2: impl Parser<'a, U> + 'a,
 ) -> impl Parser<'a, (Token<T>, Token<U>)> {
-    ClosureParser::new(move |input| pthen_impl(parser1.clone(), parser2.clone(), input))
+    ThenParser {
+        parser1,
+        parser2,
+        _phantom: std::marker::PhantomData,
+    }
 }
 
 fn por<'a, T: Clone + 'a>(
