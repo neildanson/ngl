@@ -333,7 +333,7 @@ fn pmany_impl<'a, T: Clone + 'a>(
 }
 
 fn pleft_impl<'a, T: Clone + 'a, U: Clone + 'a>(
-    parser: impl Parser<'a, (Token<T>, Token<U>)>,
+    parser: &impl Parser<'a, (Token<T>, Token<U>)>,
     input: ContinuationState<'a>,
 ) -> ParseResult<'a, T> {
     let result = parser.parse(input);
@@ -344,7 +344,7 @@ fn pleft_impl<'a, T: Clone + 'a, U: Clone + 'a>(
 }
 
 fn pright_impl<'a, T: Clone + 'a, U: Clone + 'a>(
-    parser: impl Parser<'a, (Token<T>, Token<U>)>,
+    parser: &impl Parser<'a, (Token<T>, Token<U>)>,
     input: ContinuationState<'a>,
 ) -> ParseResult<'a, U> {
     let result = parser.parse(input);
@@ -597,16 +597,56 @@ fn pmany<'a, T: Clone + 'a>(parser: impl Parser<'a, T> + 'a) -> impl Parser<'a, 
     }
 }
 
+#[derive(Clone)]
+struct LeftParser<'a, T: Clone + 'a, U: Clone + 'a, P: Parser<'a, (Token<T>, Token<U>)>>
+where
+    P: Parser<'a, (Token<T>, Token<U>)>,
+{
+    parser: P,
+    _phantom: std::marker::PhantomData<&'a (T, U)>,
+}
+
+impl<'a, T: Clone + 'a, U: Clone + 'a, P: Parser<'a, (Token<T>, Token<U>)>> Parser<'a, T>
+    for LeftParser<'a, T, U, P>
+{
+    fn parse(&self, input: ContinuationState<'a>) -> ParseResult<'a, T> {
+        pleft_impl(&self.parser, input)
+    }
+}
+
 pub fn pleft<'a, T: Clone + 'a, U: Clone + 'a>(
     parser: impl Parser<'a, (Token<T>, Token<U>)> + 'a,
 ) -> impl Parser<'a, T> {
-    ClosureParser::new(move |input| pleft_impl(parser.clone(), input))
+    LeftParser {
+        parser,
+        _phantom: std::marker::PhantomData,
+    }
+}
+
+#[derive(Clone)]
+struct RightParser<'a, T: Clone + 'a, U: Clone + 'a, P: Parser<'a, (Token<T>, Token<U>)>>
+where
+    P: Parser<'a, (Token<T>, Token<U>)>,
+{
+    parser: P,
+    _phantom: std::marker::PhantomData<&'a (T, U)>,
+}
+
+impl<'a, T: Clone + 'a, U: Clone + 'a, P: Parser<'a, (Token<T>, Token<U>)>> Parser<'a, U>
+    for RightParser<'a, T, U, P>
+{
+    fn parse(&self, input: ContinuationState<'a>) -> ParseResult<'a, U> {
+        pright_impl(&self.parser, input)
+    }
 }
 
 pub fn pright<'a, T: Clone + 'a, U: Clone + 'a>(
     parser: impl Parser<'a, (Token<T>, Token<U>)> + 'a,
 ) -> impl Parser<'a, U> {
-    ClosureParser::new(move |input| pright_impl(parser.clone(), input))
+    RightParser {
+        parser,
+        _phantom: std::marker::PhantomData,
+    }
 }
 
 fn pbetween<'a, T: Clone + 'a, U: Clone + 'a, V: Clone + 'a>(
