@@ -3,8 +3,6 @@ use crate::{
     parser_combinator::token::Token,
 };
 
-use std::rc::Rc;
-
 pub type ParseResult<'a, Output> = Result<(Token<Output>, ContinuationState<'a>), Error>;
 
 pub trait Parser<'a, Output: Clone + 'a>: Clone {
@@ -143,12 +141,11 @@ where
     }
 }
 
-fn pchar_impl(c: char, input: ContinuationState) -> ParseResult<char> {
+fn pchar_impl<'a>(c: char, input: ContinuationState<'a>) -> ParseResult<'a, char> {
     let mut chars = input.remaining.chars();
     match chars.next() {
         Some(letter) if letter == c => {
-            let new_line = if letter == '\n' { 1 } else { 0 };
-            let parser_state = input.advance(1, new_line);
+            let parser_state = input.advance(1, letter == '\n');
             Ok((Token::new(c, input.position, 1), parser_state))
         }
         Some(letter) => Err(Error::new(
@@ -194,7 +191,7 @@ fn pstring_impl<'a>(value: &'a str, input: ContinuationState<'a>) -> ParseResult
     }
     match error {
         Some(err) => err,
-        None => Ok((Token::new(value, input.position, value.len()), cont)), //This seems to work, but I dont know why!
+        None => Ok((Token::new(value, input.position, value.len()), cont)),
     }
 }
 
@@ -408,7 +405,7 @@ fn ptakeuntil_impl<'a, T: Clone + 'a>(
     input: ContinuationState<'a>,
 ) -> ParseResult<'a, &'a str> {
     let result = until.parse(input);
-    let start = start.unwrap_or(input);
+    let start = start.unwrap_or_else(|| input);
     match result {
         Ok((_, cont)) => {
             let len = cont.position - start.position - 1;
@@ -418,19 +415,41 @@ fn ptakeuntil_impl<'a, T: Clone + 'a>(
             ));
         }
         Err(_) => {
-            let cont = input.advance(1, 0); //TODO line advances
+            let cont = input.advance(1, false); //TODO line advances
             return ptakeuntil_impl(until, Some(start), cont);
         }
     }
 }
 
-//TODO - can I make these using a macro????
-pub fn pchar<'a>(value: char) -> impl Parser<'a, char> {
-    ClosureParser::new(move |input| pchar_impl(value, input))
+#[derive(Clone)]
+struct CharParser {
+    value: char,
 }
 
-pub fn pstring(value: &str) -> impl Parser<&str> {
-    ClosureParser::new(move |input| pstring_impl(value, input))
+impl<'a> Parser<'a, char> for CharParser {
+    fn parse(&self, input: ContinuationState<'a>) -> ParseResult<'a, char> {
+        pchar_impl(self.value, input)
+    }
+}
+
+//TODO - can I make these using a macro????
+pub fn pchar<'a>(value: char) -> impl Parser<'a, char> {
+    CharParser { value: value }
+}
+
+#[derive(Clone)]
+struct StringParser<'a> {
+    value: &'a str,
+}
+
+impl<'a> Parser<'a, &'a str> for StringParser<'a> {
+    fn parse(&self, input: ContinuationState<'a>) -> ParseResult<'a, &'a str> {
+        pstring_impl(self.value, input)
+    }
+}
+
+pub fn pstring<'a>(value: &'a str) -> impl Parser<'a, &str> {
+    StringParser { value }
 }
 
 fn pthen<'a, T: Clone + 'a, U: Clone + 'a>(

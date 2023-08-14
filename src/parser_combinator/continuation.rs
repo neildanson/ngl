@@ -16,16 +16,17 @@ impl<'a> ContinuationState<'a> {
         }
     }
 
-    pub(crate) fn advance(&self, abs: usize, line: usize) -> Self {
+    pub(crate) fn advance(self, abs: usize, new_line: bool) -> Self {
+        let (line_number, line_position) = if new_line {
+            (self.line_number + 1, 0)
+        } else {
+            (self.line_number, self.line_position + abs)
+        };
         Self {
             remaining: &self.remaining[abs..],
             position: self.position + abs,
-            line_number: self.line_number + line,
-            line_position: if line == 0 {
-                self.line_position + abs
-            } else {
-                0
-            },
+            line_number,
+            line_position,
         }
     }
 }
