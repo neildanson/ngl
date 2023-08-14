@@ -25,15 +25,15 @@ enum Value<'a> {
 const WS: [char; 4] = [' ', '\n', '\t', '\r'];
 const NUMBERS: [char; 10] = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
 
-fn pws<'a>() -> impl Parser<'a, Vec<Token<char>>> {
+fn pws<'a>() -> impl Parser<'a, Output = Vec<Token<char>>> {
     pany(&WS).many()
 }
 
-fn pchar_ws<'a>(c: char) -> impl Parser<'a, char> {
+fn pchar_ws<'a>(c: char) -> impl Parser<'a, Output = char> {
     pleft(pchar(c).then(pws()))
 }
 
-fn pint<'a>() -> impl Parser<'a, Value<'a>> {
+fn pint<'a>() -> impl Parser<'a, Output = Value<'a>> {
     let any_number = pany(&NUMBERS);
     let many_numbers = any_number.many1();
     let number_parser = pchar('-').optional().then(many_numbers);
@@ -48,16 +48,16 @@ fn pint<'a>() -> impl Parser<'a, Value<'a>> {
     pnumber.map(Value::Number)
 }
 
-fn pquoted_string_raw<'a>() -> impl Parser<'a, &'a str> {
+fn pquoted_string_raw<'a>() -> impl Parser<'a, Output = &'a str> {
     let pquote = pchar('"');
     pleft(pright(pquote.clone().then(pquote.take_until())).then(pws()))
 }
 
-fn pquoted_string<'a>() -> impl Parser<'a, Value<'a>> {
+fn pquoted_string<'a>() -> impl Parser<'a, Output = Value<'a>> {
     pquoted_string_raw().map(Value::String)
 }
 
-fn parray<'a>() -> impl Parser<'a, Value<'a>> {
+fn parray<'a>() -> impl Parser<'a, Output = Value<'a>> {
     let comma = pchar_ws(',');
 
     let pvalue = pvalue();
@@ -67,11 +67,11 @@ fn parray<'a>() -> impl Parser<'a, Value<'a>> {
         .map(|t| Value::Array(t.iter().map(|t| t.value.clone()).collect()))
 }
 
-fn pvalue<'a>() -> impl Parser<'a, Value<'a>> {
+fn pvalue<'a>() -> impl Parser<'a, Output = Value<'a>> {
     pchoice!(pint(), pquoted_string(), parray())
 }
 
-fn ppair<'a>() -> impl Parser<'a, (&'a str, Value<'a>)> {
+fn ppair<'a>() -> impl Parser<'a, Output = (&'a str, Value<'a>)> {
     let pcolon = pchar_ws(':');
     let pidentifier = pquoted_string_raw();
     let pvalue = pvalue();
@@ -81,7 +81,7 @@ fn ppair<'a>() -> impl Parser<'a, (&'a str, Value<'a>)> {
         .map(|(identifier, value)| (identifier.value.0.value, value.value))
 }
 
-fn json<'a>() -> impl Parser<'a, Vec<Token<(&'a str, Value<'a>)>>> {
+fn json<'a>() -> impl Parser<'a, Output = Vec<Token<(&'a str, Value<'a>)>>> {
     ppair()
         .sep_by(pchar_ws(','))
         .between(pchar_ws('{'), pchar_ws('}'))

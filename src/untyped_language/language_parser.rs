@@ -25,7 +25,7 @@ const ALPHA_NUMERIC: [char; 63] = [
 ];
 const WS: [char; 4] = [' ', '\n', '\t', '\r'];
 
-pub(crate) fn pint<'a>() -> impl Parser<'a, Value> {
+pub(crate) fn pint<'a>() -> impl Parser<'a, Output = Value> {
     let any_number = pany(&NUMBERS);
     let many_numbers = any_number.many1();
     let number_parser = pchar('-').optional().then(many_numbers);
@@ -40,24 +40,24 @@ pub(crate) fn pint<'a>() -> impl Parser<'a, Value> {
     pnumber.map(Value::Number)
 }
 
-fn pbool<'a>() -> impl Parser<'a, Value> {
+fn pbool<'a>() -> impl Parser<'a, Output = Value> {
     let ptrue = pstring(TRUE).map(|_| true);
     let pfalse = pstring(FALSE).map(|_| false);
     ptrue.or(pfalse).map(Value::Bool)
 }
 
-pub fn pquoted_string<'a>() -> impl Parser<'a, Value> {
+pub fn pquoted_string<'a>() -> impl Parser<'a, Output = Value> {
     let pquote = pchar('"');
     let pstring = pright(pquote.clone().then(pquote.take_until()));
     pstring.map(|string| Value::String(string.to_string()))
 }
 
-fn pvalue<'a>() -> impl Parser<'a, Value> {
+fn pvalue<'a>() -> impl Parser<'a, Output = Value> {
     pchoice!(pint(), pbool(), pquoted_string())
 }
 
 //TODO disallow reserved words
-pub fn pidentifier<'a>() -> impl Parser<'a, String> {
+pub fn pidentifier<'a>() -> impl Parser<'a, Output = String> {
     let ident = pany(&ALPHA);
     let alpha_numeric = pany(&ALPHA_NUMERIC).many();
     let ident = ident.then(alpha_numeric);
@@ -69,24 +69,24 @@ pub fn pidentifier<'a>() -> impl Parser<'a, String> {
     })
 }
 
-pub fn pws<'a>() -> impl Parser<'a, Vec<Token<char>>> {
+pub fn pws<'a>() -> impl Parser<'a, Output = Vec<Token<char>>> {
     pany(&WS).many()
 }
 
-fn pchar_ws<'a>(c: char) -> impl Parser<'a, char> {
+fn pchar_ws<'a>(c: char) -> impl Parser<'a, Output = char> {
     pleft(pchar(c).then(pws()))
 }
 
-fn pstring_ws(s: &str) -> impl Parser<&str> {
+fn pstring_ws(s: &str) -> impl Parser<Output = &str> {
     pleft(pstring(s).then(pws()))
 }
 
-pub fn pterminator<'a>() -> impl Parser<'a, ()> {
+pub fn pterminator<'a>() -> impl Parser<'a, Output = ()> {
     let psemi = pchar(';').map(|_| ());
     pleft(psemi.then(pws()))
 }
 
-pub fn pparam<'a>() -> impl Parser<'a, Parameter> {
+pub fn pparam<'a>() -> impl Parser<'a, Output = Parameter> {
     let param_binding = pleft(pidentifier().then(pws()));
     let param_binding = pleft(param_binding.then(pchar_ws(':')));
     let param_binding = param_binding.then(pidentifier());
@@ -94,7 +94,7 @@ pub fn pparam<'a>() -> impl Parser<'a, Parameter> {
     param_binding.map(|(name, type_)| Parameter(name, type_))
 }
 
-pub fn pparams<'a>() -> impl Parser<'a, Vec<Token<Parameter>>> {
+pub fn pparams<'a>() -> impl Parser<'a, Output = Vec<Token<Parameter>>> {
     let lparen = pchar_ws('(');
     let rparen = pchar_ws(')');
     let comma = pchar_ws(',');
@@ -104,7 +104,7 @@ pub fn pparams<'a>() -> impl Parser<'a, Vec<Token<Parameter>>> {
     param_list.between(lparen, rparen)
 }
 
-pub fn plet<'a>() -> impl Parser<'a, ExprOrStatement> {
+pub fn plet<'a>() -> impl Parser<'a, Output = ExprOrStatement> {
     let let_binding = pstring_ws("let");
     let let_binding = pright(let_binding.then(pidentifier()));
     let let_binding = pleft(let_binding.then(pws()));
@@ -114,12 +114,12 @@ pub fn plet<'a>() -> impl Parser<'a, ExprOrStatement> {
     let_binding.map(|(name, value)| ExprOrStatement::Statement(Statement::Let(name, value)))
 }
 
-pub fn pexpr<'a>() -> impl Parser<'a, Expr> {
+pub fn pexpr<'a>() -> impl Parser<'a, Output = Expr> {
     let value = pvalue().map(Expr::Value);
     pchoice!(value, pcall(), pidentifier().map(Expr::Ident))
 }
 
-pub fn pcall<'a>() -> impl Parser<'a, Expr> {
+pub fn pcall<'a>() -> impl Parser<'a, Output = Expr> {
     let call_binding = pleft(pidentifier().then(pws()));
     let lparen = pchar_ws('(');
     let rparen = pchar_ws(')');
@@ -134,7 +134,7 @@ pub fn pcall<'a>() -> impl Parser<'a, Expr> {
     call_binding.map(|(name, params)| Expr::Call(name, params.value))
 }
 
-pub fn pbody<'a>() -> impl Parser<'a, Vec<Token<ExprOrStatement>>> {
+pub fn pbody<'a>() -> impl Parser<'a, Output = Vec<Token<ExprOrStatement>>> {
     let plbrace = pchar_ws('{');
     let prbrace = pchar_ws('}');
 
@@ -146,7 +146,7 @@ pub fn pbody<'a>() -> impl Parser<'a, Vec<Token<ExprOrStatement>>> {
     pexprorstatement.between(plbrace, prbrace)
 }
 
-pub fn pfun<'a>() -> impl Parser<'a, Fun> {
+pub fn pfun<'a>() -> impl Parser<'a, Output = Fun> {
     let fun_binding = pstring_ws(FUN);
     let fun_binding = pright(fun_binding.then(pidentifier()));
     let fun_binding = pleft(fun_binding.then(pws()));
