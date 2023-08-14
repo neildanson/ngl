@@ -196,8 +196,8 @@ fn pstring_impl<'a>(value: &'a str, input: ContinuationState<'a>) -> ParseResult
 }
 
 fn pthen_impl<'a, T: Clone + 'a, U: Clone + 'a>(
-    parser1: impl Parser<'a, T>,
-    parser2: impl Parser<'a, U>,
+    parser1: &impl Parser<'a, T>,
+    parser2: &impl Parser<'a, U>,
     input: ContinuationState<'a>,
 ) -> ParseResult<'a, (Token<T>, Token<U>)> {
     let result1 = parser1.parse(input);
@@ -216,8 +216,8 @@ fn pthen_impl<'a, T: Clone + 'a, U: Clone + 'a>(
 }
 
 fn por_impl<'a, T: Clone + 'a>(
-    parser1: impl Parser<'a, T>,
-    parser2: impl Parser<'a, T>,
+    parser1: &impl Parser<'a, T>,
+    parser2: &impl Parser<'a, T>,
     input: ContinuationState<'a>,
 ) -> ParseResult<'a, T> {
     let result1 = parser1.parse(input);
@@ -240,7 +240,7 @@ fn por_impl<'a, T: Clone + 'a>(
 }
 
 fn poptional_impl<'a, T: Clone + 'a>(
-    parser: impl Parser<'a, T>,
+    parser: &impl Parser<'a, T>,
     input: ContinuationState<'a>,
 ) -> ParseResult<'a, Option<T>> {
     let result1 = parser.parse(input);
@@ -466,7 +466,7 @@ where
     P2: Parser<'a, U>,
 {
     fn parse(&self, input: ContinuationState<'a>) -> ParseResult<'a, (Token<T>, Token<U>)> {
-        pthen_impl(self.parser1.clone(), self.parser2.clone(), input)
+        pthen_impl(&self.parser1, &self.parser2, input)
     }
 }
 
@@ -494,7 +494,7 @@ where
     P2: Parser<'a, T>,
 {
     fn parse(&self, input: ContinuationState<'a>) -> ParseResult<'a, T> {
-        por_impl(self.parser1.clone(), self.parser2.clone(), input)
+        por_impl(&self.parser1, &self.parser2, input)
     }
 }
 
@@ -520,7 +520,7 @@ where
     P: Parser<'a, T>,
 {
     fn parse(&self, input: ContinuationState<'a>) -> ParseResult<'a, Option<T>> {
-        poptional_impl(self.parser.clone(), input)
+        poptional_impl(&self.parser, input)
     }
 }
 
