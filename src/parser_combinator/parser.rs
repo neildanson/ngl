@@ -111,7 +111,7 @@ struct ClosureParser<'a, Output, F>
 where
     F: Fn(ContinuationState<'a>) -> ParseResult<'a, Output>,
 {
-    parser: Rc<F>,
+    parser: F,
     _phantom: std::marker::PhantomData<&'a Output>,
 }
 
@@ -129,7 +129,7 @@ where
     F: Fn(ContinuationState<'a>) -> ParseResult<'a, Output>,
 {
     ClosureParser {
-        parser: Rc::new(parser),
+        parser,
         _phantom: std::marker::PhantomData,
     }
 }
@@ -394,8 +394,7 @@ fn pchoice_impl<'a, T: Clone + 'a>(
     }
 
     let mut error = errors.remove(0);
-    for err in errors.iter() {
-        let err = err.clone();
+    for err in errors.into_iter() {
         error = error + err;
     }
 

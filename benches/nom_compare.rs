@@ -16,10 +16,10 @@ const JSON: &str = r#"{
 }"#;
 
 #[derive(Clone)]
-enum Value {
+enum Value<'a> {
     Number(i32),
-    String(String),
-    Array(Vec<Value>),
+    String(&'a str),
+    Array(Vec<Value<'a>>),
 }
 
 const WS: [char; 4] = [' ', '\n', '\t', '\r'];
@@ -33,7 +33,7 @@ fn pchar_ws<'a>(c: char) -> impl Parser<'a, char> {
     pleft(pchar(c).then(pws()))
 }
 
-fn pint<'a>() -> impl Parser<'a, Value> {
+fn pint<'a>() -> impl Parser<'a, Value<'a>> {
     let any_number = pany(&NUMBERS);
     let many_numbers = any_number.many1();
     let number_parser = pchar('-').optional().then(many_numbers);
@@ -53,11 +53,11 @@ fn pquoted_string_raw<'a>() -> impl Parser<'a, &'a str> {
     pleft(pright(pquote.clone().then(pquote.take_until())).then(pws()))
 }
 
-fn pquoted_string<'a>() -> impl Parser<'a, Value> {
-    pquoted_string_raw().map(|string| Value::String(string.to_string()))
+fn pquoted_string<'a>() -> impl Parser<'a, Value<'a>> {
+    pquoted_string_raw().map(Value::String)
 }
 
-fn parray<'a>() -> impl Parser<'a, Value> {
+fn parray<'a>() -> impl Parser<'a, Value<'a>> {
     let comma = pchar_ws(',');
 
     let pvalue = pvalue();
@@ -67,11 +67,11 @@ fn parray<'a>() -> impl Parser<'a, Value> {
         .map(|t| Value::Array(t.iter().map(|t| t.value.clone()).collect()))
 }
 
-fn pvalue<'a>() -> impl Parser<'a, Value> {
+fn pvalue<'a>() -> impl Parser<'a, Value<'a>> {
     pchoice!(pint(), pquoted_string(), parray())
 }
 
-fn ppair<'a>() -> impl Parser<'a, (&'a str, Value)> {
+fn ppair<'a>() -> impl Parser<'a, (&'a str, Value<'a>)> {
     let pcolon = pchar_ws(':');
     let pidentifier = pquoted_string_raw();
     let pvalue = pvalue();
@@ -81,7 +81,7 @@ fn ppair<'a>() -> impl Parser<'a, (&'a str, Value)> {
         .map(|(identifier, value)| (identifier.value.0.value, value.value))
 }
 
-fn json<'a>() -> impl Parser<'a, Vec<Token<(&'a str, Value)>>> {
+fn json<'a>() -> impl Parser<'a, Vec<Token<(&'a str, Value<'a>)>>> {
     ppair()
         .sep_by(pchar_ws(','))
         .between(pchar_ws('{'), pchar_ws('}'))

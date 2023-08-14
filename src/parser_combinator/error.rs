@@ -3,7 +3,7 @@ use std::{
     ops::Add,
 };
 
-#[derive(PartialEq, Clone)]
+#[derive(PartialEq)]
 pub struct Error {
     pub expected: String,
     pub actual: String,
