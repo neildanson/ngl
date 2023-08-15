@@ -400,7 +400,7 @@ fn pchoice_impl<'a, T: Clone + 'a>(
 
 //TODO deal with case where string is never termianted
 fn ptakeuntil_impl<'a, T: Clone + 'a>(
-    until: impl Parser<'a, T>,
+    until: &impl Parser<'a, T>,
     start: Option<ContinuationState<'a>>,
     input: ContinuationState<'a>,
 ) -> ParseResult<'a, &'a str> {
@@ -531,8 +531,19 @@ fn poptional<'a, T: Clone + 'a>(parser: impl Parser<'a, T> + 'a) -> impl Parser<
     }
 }
 
+#[derive(Clone)]
+struct AnyParser<'a> {
+    valid_chars: &'a [char],
+}
+
+impl<'a> Parser<'a, char> for AnyParser<'a> {
+    fn parse(&self, input: ContinuationState<'a>) -> ParseResult<'a, char> {
+        pany_impl(self.valid_chars, input)
+    }
+}
+
 pub fn pany(valid_chars: &[char]) -> impl Parser<char> {
-    ClosureParser::new(move |input| pany_impl(valid_chars, input))
+    AnyParser { valid_chars }
 }
 
 #[derive(Clone)]
@@ -706,12 +717,33 @@ fn pmany1<'a, T: Clone + 'a>(parser: impl Parser<'a, T> + 'a) -> impl Parser<'a,
     p1(pmany(parser))
 }
 
-pub fn pchoice<'a, T: Clone + 'a>(parsers: Vec<impl Parser<'a, T>>) -> impl Parser<'a, T> {
-    ClosureParser::new(move |input| pchoice_impl(parsers.clone(), input))
+//pub fn pchoice<'a, T: Clone + 'a>(parsers: Vec<impl Parser<'a, T>>) -> impl Parser<'a, T> {
+//    ClosureParser::new(move |input| pchoice_impl(parsers.clone(), input))
+//}
+
+#[derive(Clone)]
+struct TakeUntilParser<'a, P, T: Clone>
+where
+    P: Parser<'a, T>,
+{
+    until: P,
+    _phantom: std::marker::PhantomData<&'a T>,
+}
+
+impl<'a, P, T: Clone> Parser<'a, &'a str> for TakeUntilParser<'a, P, T>
+where
+    P: Parser<'a, T>,
+{
+    fn parse(&self, input: ContinuationState<'a>) -> ParseResult<'a, &'a str> {
+        ptakeuntil_impl(&self.until, None, input)
+    }
 }
 
 fn ptake_until<'a, T: Clone + 'a>(until: impl Parser<'a, T>) -> impl Parser<'a, &'a str> {
-    ClosureParser::new(move |input| ptakeuntil_impl(until.clone(), None, input))
+    TakeUntilParser {
+        until,
+        _phantom: std::marker::PhantomData,
+    }
 }
 
 #[macro_export]
