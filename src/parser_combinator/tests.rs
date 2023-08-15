@@ -247,7 +247,6 @@ fn test_correct_line_number_on_error() {
     assert_eq!(result, expected);
 }
 
-/*
 #[test]
 fn test_pchoice_success() {
     let parser = pchoice(vec![pchar('a'), pchar('b')]);
@@ -274,7 +273,7 @@ fn test_pchoice_fail() {
     let result = parser.parse("c".into());
     let expected = Err(Error::new("a or b".to_string(), "c".to_string(), 0, 0, 0));
     assert_eq!(result, expected);
-}*/
+}
 
 #[test]
 fn test_pchoice_fail_macro() {
