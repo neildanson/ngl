@@ -378,7 +378,7 @@ fn p1_impl<'a, T: Clone + 'a>(
 }
 
 fn pchoice_impl<'a, T: Clone + 'a>(
-    parsers: Vec<impl Parser<'a, T>>,
+    parsers: &[impl Parser<'a, T>],
     input: ContinuationState<'a>,
 ) -> ParseResult<'a, T> {
     let mut errors = Vec::new();
@@ -717,9 +717,31 @@ fn pmany1<'a, T: Clone + 'a>(parser: impl Parser<'a, T> + 'a) -> impl Parser<'a,
     p1(pmany(parser))
 }
 
-//pub fn pchoice<'a, T: Clone + 'a>(parsers: Vec<impl Parser<'a, T>>) -> impl Parser<'a, T> {
-//    ClosureParser::new(move |input| pchoice_impl(parsers.clone(), input))
-//}
+#[derive(Clone)]
+struct ChoiceParser<'a, P, T: Clone + 'a>
+where
+    P: Parser<'a, T>,
+{
+    parsers: Vec<P>,
+    _phantom: std::marker::PhantomData<&'a T>,
+}
+
+impl<'a, P, T: Clone> Parser<'a, T> for ChoiceParser<'a, P, T>
+where
+    P: Parser<'a, T>,
+{
+    fn parse(&self, input: ContinuationState<'a>) -> ParseResult<'a, T> {
+        pchoice_impl(&self.parsers, input)
+    }
+}
+
+pub fn pchoice<'a, T: Clone + 'a>(parsers: Vec<impl Parser<'a, T>>) -> impl Parser<'a, T> {
+    ChoiceParser {
+        parsers,
+        _phantom: std::marker::PhantomData,
+    }
+    //ClosureParser::new(move |input| pchoice_impl(parsers.clone(), input))
+}
 
 #[derive(Clone)]
 struct TakeUntilParser<'a, P, T: Clone>
