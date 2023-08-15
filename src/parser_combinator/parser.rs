@@ -5,9 +5,10 @@ use crate::{
 
 pub type ParseResult<'a, Output> = Result<(Token<Output>, ContinuationState<'a>), Error>;
 
-pub trait Parser<'a, Output: Clone + 'a>: Clone {
+pub trait Parser<'a, Output: 'a> {
     fn parse(&self, input: ContinuationState<'a>) -> ParseResult<'a, Output>;
-    fn then<NextOutput: Clone + 'a>(
+
+    fn then<NextOutput: 'a>(
         self,
         next: impl Parser<'a, NextOutput> + 'a,
     ) -> impl Parser<'a, (Token<Output>, Token<NextOutput>)>
@@ -91,20 +92,8 @@ pub trait Parser<'a, Output: Clone + 'a>: Clone {
     {
         pbetween(parser1, self, parser2)
     }
-
-    /*
-    todo - left, right, at_least_one
-
-    fn at_least_one(self) -> impl Parser<'a, Vec<Token<Output>>>
-    where
-        Self: Sized + 'a,
-    {
-        p1(self)
-    }
-    */
 }
 
-#[derive(Clone)]
 struct ClosureParser<'a, Output, F>
 where
     F: Fn(ContinuationState<'a>) -> ParseResult<'a, Output>,
@@ -113,7 +102,7 @@ where
     _phantom: std::marker::PhantomData<&'a Output>,
 }
 
-impl<'a, Output: Clone + 'a, F: Clone> ClosureParser<'a, Output, F>
+impl<'a, Output: 'a, F> ClosureParser<'a, Output, F>
 where
     F: Fn(ContinuationState<'a>) -> ParseResult<'a, Output>,
 {
@@ -122,7 +111,7 @@ where
     }
 }
 
-pub fn parser_from_fn<'a, Output: Clone + 'a, F: Clone>(parser: F) -> impl Parser<'a, Output>
+pub fn parser_from_fn<'a, Output: 'a, F>(parser: F) -> impl Parser<'a, Output>
 where
     F: Fn(ContinuationState<'a>) -> ParseResult<'a, Output>,
 {
@@ -195,7 +184,7 @@ fn pstring_impl<'a>(value: &'a str, input: ContinuationState<'a>) -> ParseResult
     }
 }
 
-fn pthen_impl<'a, T: Clone + 'a, U: Clone + 'a>(
+fn pthen_impl<'a, T:'a, U: 'a>(
     parser1: &impl Parser<'a, T>,
     parser2: &impl Parser<'a, U>,
     input: ContinuationState<'a>,
@@ -215,7 +204,7 @@ fn pthen_impl<'a, T: Clone + 'a, U: Clone + 'a>(
     })
 }
 
-fn por_impl<'a, T: Clone + 'a>(
+fn por_impl<'a, T: 'a>(
     parser1: &impl Parser<'a, T>,
     parser2: &impl Parser<'a, T>,
     input: ContinuationState<'a>,
@@ -239,7 +228,7 @@ fn por_impl<'a, T: Clone + 'a>(
     })
 }
 
-fn poptional_impl<'a, T: Clone + 'a>(
+fn poptional_impl<'a, T: 'a>(
     parser: &impl Parser<'a, T>,
     input: ContinuationState<'a>,
 ) -> ParseResult<'a, Option<T>> {
@@ -253,7 +242,7 @@ fn poptional_impl<'a, T: Clone + 'a>(
     }
 }
 
-fn pmap_impl<'a, T: Clone + 'a, U, F>(
+fn pmap_impl<'a, T: 'a, U, F>(
     parser: &impl Parser<'a, T>,
     f: &F,
     input: ContinuationState<'a>,
@@ -305,7 +294,7 @@ fn pany_impl<'a>(valid_chars: &[char], input: ContinuationState<'a>) -> ParseRes
     ))
 }
 
-fn pmany_impl<'a, T: Clone + 'a>(
+fn pmany_impl<'a, T: 'a>(
     parser: &impl Parser<'a, T>,
     input: ContinuationState<'a>,
 ) -> ParseResult<'a, Vec<Token<T>>> {
@@ -332,7 +321,7 @@ fn pmany_impl<'a, T: Clone + 'a>(
     }
 }
 
-fn pleft_impl<'a, T: Clone + 'a, U: Clone + 'a>(
+fn pleft_impl<'a, T: 'a, U: 'a>(
     parser: &impl Parser<'a, (Token<T>, Token<U>)>,
     input: ContinuationState<'a>,
 ) -> ParseResult<'a, T> {
@@ -343,7 +332,7 @@ fn pleft_impl<'a, T: Clone + 'a, U: Clone + 'a>(
     })
 }
 
-fn pright_impl<'a, T: Clone + 'a, U: Clone + 'a>(
+fn pright_impl<'a, T: 'a, U: 'a>(
     parser: &impl Parser<'a, (Token<T>, Token<U>)>,
     input: ContinuationState<'a>,
 ) -> ParseResult<'a, U> {
@@ -354,7 +343,7 @@ fn pright_impl<'a, T: Clone + 'a, U: Clone + 'a>(
     })
 }
 
-fn p1_impl<'a, T: Clone + 'a>(
+fn p1_impl<'a, T: 'a>(
     parser: &impl Parser<'a, Vec<Token<T>>>,
     input: ContinuationState<'a>,
 ) -> ParseResult<'a, Vec<Token<T>>> {
@@ -399,7 +388,7 @@ fn pchoice_impl<'a, T: Clone + 'a>(
 }
 
 //TODO deal with case where string is never termianted
-fn ptakeuntil_impl<'a, T: Clone + 'a>(
+fn ptakeuntil_impl<'a, T: 'a>(
     until: &impl Parser<'a, T>,
     start: Option<ContinuationState<'a>>,
     input: ContinuationState<'a>,
@@ -453,13 +442,13 @@ pub fn pstring<'a>(value: &'a str) -> impl Parser<'a, &str> {
 }
 
 #[derive(Clone)]
-struct ThenParser<'a, T: Clone + 'a, U: Clone + 'a, P1: Parser<'a, T>, P2: Parser<'a, U>> {
+struct ThenParser<'a, T: 'a, U: 'a, P1: Parser<'a, T>, P2: Parser<'a, U>> {
     parser1: P1,
     parser2: P2,
     _phantom: std::marker::PhantomData<&'a (T, U)>,
 }
 
-impl<'a, T: Clone, U: Clone, P1, P2> Parser<'a, (Token<T>, Token<U>)>
+impl<'a, T, U, P1, P2> Parser<'a, (Token<T>, Token<U>)>
     for ThenParser<'a, T, U, P1, P2>
 where
     P1: Parser<'a, T>,
@@ -470,7 +459,7 @@ where
     }
 }
 
-fn pthen<'a, T: Clone + 'a, U: Clone + 'a>(
+fn pthen<'a, T: 'a, U: 'a>(
     parser1: impl Parser<'a, T> + 'a,
     parser2: impl Parser<'a, U> + 'a,
 ) -> impl Parser<'a, (Token<T>, Token<U>)> {
@@ -481,14 +470,13 @@ fn pthen<'a, T: Clone + 'a, U: Clone + 'a>(
     }
 }
 
-#[derive(Clone)]
-struct OrParser<'a, T: Clone + 'a, P1: Parser<'a, T>, P2: Parser<'a, T>> {
+struct OrParser<'a, T: 'a, P1: Parser<'a, T>, P2: Parser<'a, T>> {
     parser1: P1,
     parser2: P2,
     _phantom: std::marker::PhantomData<&'a T>,
 }
 
-impl<'a, T: Clone, P1, P2> Parser<'a, T> for OrParser<'a, T, P1, P2>
+impl<'a, T, P1, P2> Parser<'a, T> for OrParser<'a, T, P1, P2>
 where
     P1: Parser<'a, T>,
     P2: Parser<'a, T>,
@@ -498,7 +486,7 @@ where
     }
 }
 
-fn por<'a, T: Clone + 'a>(
+fn por<'a, T: 'a>(
     parser1: impl Parser<'a, T> + 'a,
     parser2: impl Parser<'a, T> + 'a,
 ) -> impl Parser<'a, T> {
@@ -510,12 +498,12 @@ fn por<'a, T: Clone + 'a>(
 }
 
 #[derive(Clone)]
-struct OptionalParser<'a, T: Clone + 'a, P: Parser<'a, T>> {
+struct OptionalParser<'a, T : 'a, P: Parser<'a, T>> {
     parser: P,
     _phantom: std::marker::PhantomData<&'a T>,
 }
 
-impl<'a, T: Clone, P> Parser<'a, Option<T>> for OptionalParser<'a, T, P>
+impl<'a, T, P> Parser<'a, Option<T>> for OptionalParser<'a, T, P>
 where
     P: Parser<'a, T>,
 {
@@ -524,7 +512,7 @@ where
     }
 }
 
-fn poptional<'a, T: Clone + 'a>(parser: impl Parser<'a, T> + 'a) -> impl Parser<'a, Option<T>> {
+fn poptional<'a, T: 'a>(parser: impl Parser<'a, T> + 'a) -> impl Parser<'a, Option<T>> {
     OptionalParser {
         parser,
         _phantom: std::marker::PhantomData,
@@ -546,18 +534,17 @@ pub fn pany(valid_chars: &[char]) -> impl Parser<char> {
     AnyParser { valid_chars }
 }
 
-#[derive(Clone)]
-struct MapParser<'a, T: Clone + 'a, U: Clone + 'a, P: Parser<'a, T>, F>
+struct MapParser<'a, T : 'a, U: 'a, P: Parser<'a, T>, F>
 where
     F: Fn(T) -> U,
-    F: Clone + 'a,
+    F: 'a,
 {
     parser: P,
     f: F,
     _phantom: std::marker::PhantomData<&'a (T, U)>,
 }
 
-impl<'a, T: Clone + 'a, U: Clone + 'a, P: Parser<'a, T>, F> Parser<'a, U>
+impl<'a, T : 'a, U:  'a, P: Parser<'a, T>, F> Parser<'a, U>
     for MapParser<'a, T, U, P, F>
 where
     F: Fn(T) -> U,
@@ -568,13 +555,13 @@ where
     }
 }
 
-fn pmap<'a, T: Clone + 'a, U: Clone + 'a, F>(
+fn pmap<'a, T : 'a, U : 'a, F>(
     parser: impl Parser<'a, T> + 'a,
     f: F,
 ) -> impl Parser<'a, U>
 where
     F: Fn(T) -> U,
-    F: Clone + 'a,
+    F: 'a,
 {
     MapParser {
         parser,
@@ -584,14 +571,13 @@ where
 }
 
 #[derive(Clone)]
-struct ManyParser<'a, T: Clone + 'a, P: Parser<'a, T>> {
+struct ManyParser<'a, T: 'a, P: Parser<'a, T>> {
     parser: P,
     _phantom: std::marker::PhantomData<&'a T>,
 }
 
-impl<'a, T, P> Parser<'a, Vec<Token<T>>> for ManyParser<'a, T, P>
+impl<'a, T:'a, P> Parser<'a, Vec<Token<T>>> for ManyParser<'a, T, P>
 where
-    T: Clone + 'a,
     P: Parser<'a, T>,
 {
     fn parse(&self, input: ContinuationState<'a>) -> ParseResult<'a, Vec<Token<T>>> {
@@ -599,7 +585,7 @@ where
     }
 }
 
-fn pmany<'a, T: Clone + 'a>(parser: impl Parser<'a, T> + 'a) -> impl Parser<'a, Vec<Token<T>>> {
+fn pmany<'a, T: 'a>(parser: impl Parser<'a, T> + 'a) -> impl Parser<'a, Vec<Token<T>>> {
     {
         ManyParser {
             parser,
@@ -609,7 +595,7 @@ fn pmany<'a, T: Clone + 'a>(parser: impl Parser<'a, T> + 'a) -> impl Parser<'a, 
 }
 
 #[derive(Clone)]
-struct LeftParser<'a, T: Clone + 'a, U: Clone + 'a, P: Parser<'a, (Token<T>, Token<U>)>>
+struct LeftParser<'a, T: 'a, U: 'a, P: Parser<'a, (Token<T>, Token<U>)>>
 where
     P: Parser<'a, (Token<T>, Token<U>)>,
 {
@@ -617,7 +603,7 @@ where
     _phantom: std::marker::PhantomData<&'a (T, U)>,
 }
 
-impl<'a, T: Clone + 'a, U: Clone + 'a, P: Parser<'a, (Token<T>, Token<U>)>> Parser<'a, T>
+impl<'a, T: 'a, U:  'a, P: Parser<'a, (Token<T>, Token<U>)>> Parser<'a, T>
     for LeftParser<'a, T, U, P>
 {
     fn parse(&self, input: ContinuationState<'a>) -> ParseResult<'a, T> {
@@ -625,7 +611,7 @@ impl<'a, T: Clone + 'a, U: Clone + 'a, P: Parser<'a, (Token<T>, Token<U>)>> Pars
     }
 }
 
-pub fn pleft<'a, T: Clone + 'a, U: Clone + 'a>(
+pub fn pleft<'a, T: 'a, U: 'a>(
     parser: impl Parser<'a, (Token<T>, Token<U>)> + 'a,
 ) -> impl Parser<'a, T> {
     LeftParser {
@@ -635,7 +621,7 @@ pub fn pleft<'a, T: Clone + 'a, U: Clone + 'a>(
 }
 
 #[derive(Clone)]
-struct RightParser<'a, T: Clone + 'a, U: Clone + 'a, P: Parser<'a, (Token<T>, Token<U>)>>
+struct RightParser<'a, T: 'a, U: 'a, P: Parser<'a, (Token<T>, Token<U>)>>
 where
     P: Parser<'a, (Token<T>, Token<U>)>,
 {
@@ -643,7 +629,7 @@ where
     _phantom: std::marker::PhantomData<&'a (T, U)>,
 }
 
-impl<'a, T: Clone + 'a, U: Clone + 'a, P: Parser<'a, (Token<T>, Token<U>)>> Parser<'a, U>
+impl<'a, T: 'a, U: 'a, P: Parser<'a, (Token<T>, Token<U>)>> Parser<'a, U>
     for RightParser<'a, T, U, P>
 {
     fn parse(&self, input: ContinuationState<'a>) -> ParseResult<'a, U> {
@@ -651,7 +637,7 @@ impl<'a, T: Clone + 'a, U: Clone + 'a, P: Parser<'a, (Token<T>, Token<U>)>> Pars
     }
 }
 
-pub fn pright<'a, T: Clone + 'a, U: Clone + 'a>(
+pub fn pright<'a, T: 'a, U: 'a>(
     parser: impl Parser<'a, (Token<T>, Token<U>)> + 'a,
 ) -> impl Parser<'a, U> {
     RightParser {
@@ -660,7 +646,7 @@ pub fn pright<'a, T: Clone + 'a, U: Clone + 'a>(
     }
 }
 
-fn pbetween<'a, T: Clone + 'a, U: Clone + 'a, V: Clone + 'a>(
+fn pbetween<'a, T: 'a, U: 'a, V: 'a>(
     parser1: impl Parser<'a, T> + 'a,
     parser2: impl Parser<'a, U> + 'a,
     parser3: impl Parser<'a, V> + 'a,
@@ -671,15 +657,14 @@ fn pbetween<'a, T: Clone + 'a, U: Clone + 'a, V: Clone + 'a>(
 }
 
 #[derive(Clone)]
-struct OneParser<'a, P, T: Clone>
-where
+struct OneParser<'a, P, T> where
     P: Parser<'a, Vec<Token<T>>>,
 {
     parser: P,
     _phantom: std::marker::PhantomData<&'a T>,
 }
 
-impl<'a, P, T: Clone> Parser<'a, Vec<Token<T>>> for OneParser<'a, P, T>
+impl<'a, P, T> Parser<'a, Vec<Token<T>>> for OneParser<'a, P, T>
 where
     P: Parser<'a, Vec<Token<T>>>,
 {
@@ -688,7 +673,7 @@ where
     }
 }
 
-pub fn p1<'a, T: Clone + 'a>(
+pub fn p1<'a, T: 'a>(
     parser: impl Parser<'a, Vec<Token<T>>> + 'a,
 ) -> impl Parser<'a, Vec<Token<T>>> {
     {
@@ -703,7 +688,7 @@ fn psepby<'a, T: Clone + 'a, U: Clone + 'a>(
     parser: impl Parser<'a, T> + 'a,
     separator: impl Parser<'a, U> + 'a,
 ) -> impl Parser<'a, Vec<Token<T>>> {
-    let parser_combined = pleft(pthen(parser.clone(), separator));
+    let parser_combined = pleft(pthen(parser, separator));
     let parser_many = pmany(parser_combined);
     let parser_many_then = pthen(parser_many, parser);
     let parser = pmap(parser_many_then, |(mut tokens, token)| {
@@ -713,7 +698,7 @@ fn psepby<'a, T: Clone + 'a, U: Clone + 'a>(
     parser
 }
 
-fn pmany1<'a, T: Clone + 'a>(parser: impl Parser<'a, T> + 'a) -> impl Parser<'a, Vec<Token<T>>> {
+fn pmany1<'a, T: 'a>(parser: impl Parser<'a, T> + 'a) -> impl Parser<'a, Vec<Token<T>>> {
     p1(pmany(parser))
 }
 
@@ -744,7 +729,7 @@ pub fn pchoice<'a, T: Clone + 'a>(parsers: Vec<impl Parser<'a, T>>) -> impl Pars
 }
 
 #[derive(Clone)]
-struct TakeUntilParser<'a, P, T: Clone>
+struct TakeUntilParser<'a, P, T>
 where
     P: Parser<'a, T>,
 {
@@ -752,7 +737,7 @@ where
     _phantom: std::marker::PhantomData<&'a T>,
 }
 
-impl<'a, P, T: Clone> Parser<'a, &'a str> for TakeUntilParser<'a, P, T>
+impl<'a, P, T> Parser<'a, &'a str> for TakeUntilParser<'a, P, T>
 where
     P: Parser<'a, T>,
 {
@@ -761,7 +746,7 @@ where
     }
 }
 
-fn ptake_until<'a, T: Clone + 'a>(until: impl Parser<'a, T>) -> impl Parser<'a, &'a str> {
+fn ptake_until<'a, T: 'a>(until: impl Parser<'a, T>) -> impl Parser<'a, &'a str> {
     TakeUntilParser {
         until,
         _phantom: std::marker::PhantomData,
