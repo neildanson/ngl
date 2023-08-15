@@ -138,7 +138,7 @@ pub fn pbody<'a>() -> impl Parser<'a, Vec<Token<ExprOrStatement>>> {
     let plbrace = pchar_ws('{');
     let prbrace = pchar_ws('}');
 
-    let call = pcall().map(|call| ExprOrStatement::Expr(call));
+    let call = pcall().map(ExprOrStatement::Expr);
     let expr_or_statement = call.or(plet());
     let expr_or_statement = pleft(expr_or_statement.then(pterminator()));
 

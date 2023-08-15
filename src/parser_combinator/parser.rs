@@ -113,15 +113,6 @@ where
     _phantom: std::marker::PhantomData<&'a Output>,
 }
 
-impl<'a, Output: Clone + 'a, F: Clone> ClosureParser<'a, Output, F>
-where
-    F: Fn(ContinuationState<'a>) -> ParseResult<'a, Output>,
-{
-    fn new(parser: F) -> impl Parser<'a, Output> {
-        parser_from_fn(parser)
-    }
-}
-
 pub fn parser_from_fn<'a, Output: Clone + 'a, F: Clone>(parser: F) -> impl Parser<'a, Output>
 where
     F: Fn(ContinuationState<'a>) -> ParseResult<'a, Output>,
@@ -141,7 +132,7 @@ where
     }
 }
 
-fn pchar_impl<'a>(c: char, input: ContinuationState<'a>) -> ParseResult<'a, char> {
+fn pchar_impl(c: char, input: ContinuationState<'_>) -> ParseResult<'_, char> {
     let mut chars = input.remaining.chars();
     match chars.next() {
         Some(letter) if letter == c => {
@@ -405,18 +396,18 @@ fn ptakeuntil_impl<'a, Until: Clone + 'a>(
     input: ContinuationState<'a>,
 ) -> ParseResult<'a, &'a str> {
     let result = until.parse(input);
-    let start = start.unwrap_or_else(|| input);
+    let start = start.unwrap_or(input);
     match result {
         Ok((_, cont)) => {
             let len = cont.position - start.position - 1;
-            return Ok((
+            Ok((
                 Token::new(&start.remaining[0..len], start.position, len),
                 cont,
-            ));
+            ))
         }
         Err(_) => {
             let cont = input.advance(1, false); //TODO line advances
-            return ptakeuntil_impl(until, Some(start), cont);
+            ptakeuntil_impl(until, Some(start), cont)
         }
     }
 }
@@ -434,7 +425,7 @@ impl<'a> Parser<'a, char> for CharParser {
 
 //TODO - can I make these using a macro????
 pub fn pchar<'a>(value: char) -> impl Parser<'a, char> {
-    CharParser { value: value }
+    CharParser { value }
 }
 
 #[derive(Clone)]
@@ -448,7 +439,7 @@ impl<'a> Parser<'a, &'a str> for StringParser<'a> {
     }
 }
 
-pub fn pstring<'a>(value: &'a str) -> impl Parser<'a, &str> {
+pub fn pstring(value: &str) -> impl Parser<'_, &str> {
     StringParser { value }
 }
 
