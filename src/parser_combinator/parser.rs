@@ -355,7 +355,7 @@ fn pright_impl<'a, T: Clone + 'a, U: Clone + 'a>(
 }
 
 fn p1_impl<'a, T: Clone + 'a>(
-    parser: impl Parser<'a, Vec<Token<T>>>,
+    parser: &impl Parser<'a, Vec<Token<T>>>,
     input: ContinuationState<'a>,
 ) -> ParseResult<'a, Vec<Token<T>>> {
     let result = parser.parse(input);
@@ -659,10 +659,33 @@ fn pbetween<'a, T: Clone + 'a, U: Clone + 'a, V: Clone + 'a>(
     pleft(parser) //Ignore U
 }
 
+#[derive(Clone)]
+struct OneParser<'a, P, T: Clone>
+where
+    P: Parser<'a, Vec<Token<T>>>,
+{
+    parser: P,
+    _phantom: std::marker::PhantomData<&'a T>,
+}
+
+impl<'a, P, T: Clone> Parser<'a, Vec<Token<T>>> for OneParser<'a, P, T>
+where
+    P: Parser<'a, Vec<Token<T>>>,
+{
+    fn parse(&self, input: ContinuationState<'a>) -> ParseResult<'a, Vec<Token<T>>> {
+        p1_impl(&self.parser, input)
+    }
+}
+
 pub fn p1<'a, T: Clone + 'a>(
     parser: impl Parser<'a, Vec<Token<T>>> + 'a,
 ) -> impl Parser<'a, Vec<Token<T>>> {
-    ClosureParser::new(move |input| p1_impl(parser.clone(), input))
+    {
+        OneParser {
+            parser,
+            _phantom: std::marker::PhantomData,
+        }
+    }
 }
 
 fn psepby<'a, T: Clone + 'a, U: Clone + 'a>(
