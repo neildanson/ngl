@@ -159,16 +159,18 @@ fn pchar_impl(c: char, input: ContinuationState<'_>) -> ParseResult<'_, char> {
 fn pstring_impl<'a>(value: &'a str, input: ContinuationState<'a>) -> ParseResult<'a, &'a str> {
     let mut cont = input;
     let mut error = None;
-    let mut success = Vec::new();
     for t in value.chars() {
         let result = pchar_impl(t, cont);
         match result {
-            Ok((_, new_cont)) => {
-                success.push(t);
-                cont = new_cont
-            }
+            Ok((_, new_cont)) => cont = new_cont,
             Err(err) => {
-                let actual = success.iter().collect::<String>() + &err.actual;
+                let length = err.position - input.position + 1;
+                let actual = if input.remaining.len() < length {
+                    input.remaining[0..].to_string()
+                } else {
+                    input.remaining[0..length].to_string()
+                };
+
                 error = Some(Err(Error::new(
                     value.to_string(),
                     actual.to_string(),
