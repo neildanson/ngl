@@ -11,7 +11,6 @@ const TRUE: &str = "true";
 const FALSE: &str = "false";
 const _RESERVED: [&str; 6] = [FUN, _LET, _IF, _ELSE, TRUE, FALSE];
 
-const NUMBERS: [char; 10] = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
 const ALPHA: [char; 53] = [
     'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S',
     'T', 'U', 'V', 'W', 'X', 'Y', 'Z', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l',
@@ -26,7 +25,7 @@ const ALPHA_NUMERIC: [char; 63] = [
 const WS: [char; 4] = [' ', '\n', '\t', '\r'];
 
 pub(crate) fn pint<'a>() -> impl Parser<'a, Value> {
-    let any_number = pany(&NUMBERS);
+    let any_number = pany_range('0'..='9');
     let many_numbers = any_number.many1();
     let number_parser = pchar('-').optional().then(many_numbers);
     let pnumber = number_parser.map(move |(negate, value)| {

@@ -5,18 +5,18 @@ use super::*;
 #[test]
 fn test_pint_1() {
     let parser = pint();
-    let result = parser.parse("123".into());
+    let result = parser.parse("1234567890".into());
     let expected = Ok((
         Token {
-            value: Value::Number(123),
+            value: Value::Number(1234567890),
             start: 0,
-            length: 3,
+            length: 10,
         },
         ContinuationState {
             remaining: "",
-            position: 3,
+            position: 10,
             line_number: 0,
-            line_position: 3,
+            line_position: 10,
         },
     ));
     assert_eq!(result, expected);

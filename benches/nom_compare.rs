@@ -23,7 +23,6 @@ enum Value<'a> {
 }
 
 const WS: [char; 4] = [' ', '\n', '\t', '\r'];
-const NUMBERS: [char; 10] = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
 
 fn pws<'a>() -> impl Parser<'a, Vec<Token<char>>> {
     pany(&WS).many()
@@ -34,7 +33,7 @@ fn pchar_ws<'a>(c: char) -> impl Parser<'a, char> {
 }
 
 fn pint<'a>() -> impl Parser<'a, Value<'a>> {
-    let any_number = pany(&NUMBERS);
+    let any_number = pany_range('0'..='9');
     let many_numbers = any_number.many1();
     let number_parser = pchar('-').optional().then(many_numbers);
     let pnumber = number_parser.map(move |(negate, value)| {

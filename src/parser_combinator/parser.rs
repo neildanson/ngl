@@ -1,3 +1,5 @@
+use std::ops::{Range, RangeInclusive};
+
 use crate::{
     parser_combinator::continuation::ContinuationState, parser_combinator::error::*,
     parser_combinator::token::Token,
@@ -261,6 +263,29 @@ where
         let token = Token::new(result, token.start, token.length);
         (token, state)
     })
+}
+
+fn panyrange_impl<'a>(
+    valid_chars: &RangeInclusive<char>,
+    input: ContinuationState<'a>,
+) -> ParseResult<'a, char> {
+    let next_char = input.remaining.chars().next();
+    if let Some(next_char) = next_char {
+        if valid_chars.contains(&next_char) {
+            let parser_state = input.advance(1, next_char == '\n');
+            return Ok((Token::new(next_char, input.position, 1), parser_state));
+        }
+    }
+
+    let actual = next_char.unwrap_or(' ').to_string();
+    let error = "".to_string(); //TODO
+    Err(Error::new(
+        error,
+        actual,
+        input.position,
+        input.line_number,
+        input.line_position,
+    ))
 }
 
 fn pany_impl<'a>(valid_chars: &[char], input: ContinuationState<'a>) -> ParseResult<'a, char> {
@@ -545,6 +570,21 @@ impl<'a> Parser<'a, char> for AnyParser<'a> {
 
 pub fn pany(valid_chars: &[char]) -> impl Parser<char> {
     AnyParser { valid_chars }
+}
+
+#[derive(Clone)]
+struct AnyRangeParser {
+    valid_chars: RangeInclusive<char>,
+}
+
+impl<'a> Parser<'a, char> for AnyRangeParser {
+    fn parse(&self, input: ContinuationState<'a>) -> ParseResult<'a, char> {
+        panyrange_impl(&self.valid_chars, input)
+    }
+}
+
+pub fn pany_range<'a>(valid_chars: RangeInclusive<char>) -> impl Parser<'a, char> {
+    AnyRangeParser { valid_chars }
 }
 
 #[derive(Clone)]
