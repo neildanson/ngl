@@ -94,6 +94,13 @@ pub trait Parser<'a, Output: Clone + 'a>: Clone {
         pbetween(parser1, self, parser2)
     }
 
+    fn ws(self) -> impl Parser<'a, Output>
+    where
+        Self: Sized + 'a,
+    {
+        pleft(self.then(pws_many()))
+    }
+
     /*
     todo - left, right, at_least_one
 
@@ -265,17 +272,17 @@ where
     })
 }
 
-fn pws_impl<'a>(input: ContinuationState<'a>) -> ParseResult<'a, ()> {
+fn pws_impl(input: ContinuationState<'_>) -> ParseResult<'_, ()> {
     let next_char = input.remaining.chars().next();
     if let Some(next_char) = next_char {
         if next_char.is_whitespace() {
-            let parser_state = input.advance(1, true);
+            let parser_state = input.advance(1, next_char == '\n');
             return Ok((Token::new((), input.position, 1), parser_state));
         }
     }
 
     let actual = next_char.unwrap_or(' ').to_string();
-    let error = "".to_string(); //TODO
+    let error = " ".to_string();
     Err(Error::new(
         error,
         actual,
@@ -298,7 +305,12 @@ fn panyrange_impl<'a>(
     }
 
     let actual = next_char.unwrap_or(' ').to_string();
-    let error = "".to_string(); //TODO
+    let error = valid_chars
+        .clone()
+        .map(|x| x.to_string())
+        .collect::<Vec<_>>()
+        .join(", ");
+
     Err(Error::new(
         error,
         actual,

@@ -22,10 +22,6 @@ enum Value<'a> {
     Array(Vec<Value<'a>>),
 }
 
-fn pchar_ws<'a>(c: char) -> impl Parser<'a, char> {
-    pleft(pchar(c).then(pws().many()))
-}
-
 fn pint<'a>() -> impl Parser<'a, Value<'a>> {
     let any_number = pany_range('0'..='9');
     let many_numbers = any_number.many1();
@@ -43,7 +39,7 @@ fn pint<'a>() -> impl Parser<'a, Value<'a>> {
 
 fn pquoted_string_raw<'a>() -> impl Parser<'a, &'a str> {
     let pquote = pchar('"');
-    pleft(pright(pquote.clone().then(pquote.take_until())).then(pws_many()))
+    pright(pquote.clone().then(pquote.take_until())).ws()
 }
 
 fn pquoted_string<'a>() -> impl Parser<'a, Value<'a>> {
@@ -51,13 +47,13 @@ fn pquoted_string<'a>() -> impl Parser<'a, Value<'a>> {
 }
 
 fn parray<'a>() -> impl Parser<'a, Value<'a>> {
-    let comma = pchar_ws(',');
+    let comma = pchar(',').ws();
 
     let pvalue = pvalue();
     let pvalues = pvalue.sep_by(comma);
     pvalues
-        .between(pchar_ws('['), pchar_ws(']'))
-        .map(|t| Value::Array(t.iter().map(|t| t.value.clone()).collect()))
+        .between(pchar('[').ws(), pchar(']').ws())
+        .map(move |t| Value::Array(t.iter().map(|t| t.value.clone()).collect()))
 }
 
 fn pvalue<'a>() -> impl Parser<'a, Value<'a>> {
@@ -65,7 +61,7 @@ fn pvalue<'a>() -> impl Parser<'a, Value<'a>> {
 }
 
 fn ppair<'a>() -> impl Parser<'a, (&'a str, Value<'a>)> {
-    let pcolon = pchar_ws(':');
+    let pcolon = pchar(':').ws();
     let pidentifier = pquoted_string_raw();
     let pvalue = pvalue();
     pidentifier
@@ -76,8 +72,8 @@ fn ppair<'a>() -> impl Parser<'a, (&'a str, Value<'a>)> {
 
 fn json<'a>() -> impl Parser<'a, Vec<Token<(&'a str, Value<'a>)>>> {
     ppair()
-        .sep_by(pchar_ws(','))
-        .between(pchar_ws('{'), pchar_ws('}'))
+        .sep_by(pchar(',').ws())
+        .between(pchar('{').ws(), pchar('}').ws())
 }
 
 fn nom_json_parse(c: &mut Criterion) {
