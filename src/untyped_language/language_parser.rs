@@ -74,8 +74,7 @@ pub fn pterminator<'a>() -> impl Parser<'a, ()> {
 pub fn pparam<'a>() -> impl Parser<'a, Parameter> {
     let param_binding = pidentifier().ws();
     let param_binding = pleft(param_binding.then(pchar(':').ws()));
-    let param_binding = param_binding.then(pidentifier());
-    let param_binding = param_binding.ws();
+    let param_binding = param_binding.then(pidentifier()).ws();
     param_binding.map(|(name, type_)| Parameter(name, type_))
 }
 
@@ -91,11 +90,9 @@ pub fn pparams<'a>() -> impl Parser<'a, Vec<Token<Parameter>>> {
 
 pub fn plet<'a>() -> impl Parser<'a, ExprOrStatement> {
     let let_binding = pstring("let").ws();
-    let let_binding = pright(let_binding.then(pidentifier()));
-    let let_binding = let_binding.ws();
+    let let_binding = pright(let_binding.then(pidentifier())).ws();
     let let_binding = pleft(let_binding.then(pchar('=').ws()));
-    let let_binding = let_binding.then(pexpr());
-    let let_binding = let_binding.ws();
+    let let_binding = let_binding.then(pexpr()).ws();
     let_binding.map(|(name, value)| ExprOrStatement::Statement(Statement::Let(name, value)))
 }
 
@@ -114,9 +111,10 @@ pub fn pcall<'a>() -> impl Parser<'a, Expr> {
     let params = expr.sep_by(pchar(',').ws());
     let params = params.between(lparen, rparen);
 
-    let call_binding = call_binding.then(params);
-    let call_binding = call_binding.ws();
-    call_binding.map(|(name, params)| Expr::Call(name, params.value))
+    call_binding
+        .then(params)
+        .ws()
+        .map(|(name, params)| Expr::Call(name, params.value))
 }
 
 pub fn pbody<'a>() -> impl Parser<'a, Vec<Token<ExprOrStatement>>> {
@@ -133,13 +131,10 @@ pub fn pbody<'a>() -> impl Parser<'a, Vec<Token<ExprOrStatement>>> {
 
 pub fn pfun<'a>() -> impl Parser<'a, Fun> {
     let fun_binding = pstring(FUN).ws();
-    let fun_binding = pright(fun_binding.then(pidentifier()));
-    let fun_binding = fun_binding.ws();
-    let fun_binding = fun_binding.then(pparams());
-    let fun_binding = fun_binding.ws();
+    let fun_binding = pright(fun_binding.then(pidentifier())).ws();
+    let fun_binding = fun_binding.then(pparams()).ws();
     let fun_binding = pleft(fun_binding.then(pstring("->").ws()));
-    let fun_binding = fun_binding.then(pidentifier());
-    let fun_binding = fun_binding.ws();
+    let fun_binding = fun_binding.then(pidentifier()).ws();
     let fun_binding = fun_binding.then(pbody());
 
     let fun_binding = fun_binding.map(|(name_and_params, body)| Fun {
