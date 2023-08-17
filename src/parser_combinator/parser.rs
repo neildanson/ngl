@@ -100,17 +100,6 @@ pub trait Parser<'a, Output: Clone + 'a>: Clone {
     {
         pleft(self.then(pws_many()))
     }
-
-    /*
-    todo - left, right, at_least_one
-
-    fn at_least_one(self) -> impl Parser<'a, Vec<Token<Output>>>
-    where
-        Self: Sized + 'a,
-    {
-        p1(self)
-    }
-    */
 }
 
 #[derive(Clone)]
