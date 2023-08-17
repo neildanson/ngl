@@ -1,4 +1,4 @@
-use std::ops::{Range, RangeInclusive};
+use std::ops::RangeInclusive;
 
 use crate::{
     parser_combinator::continuation::ContinuationState, parser_combinator::error::*,
@@ -263,6 +263,26 @@ where
         let token = Token::new(result, token.start, token.length);
         (token, state)
     })
+}
+
+fn pws_impl<'a>(input: ContinuationState<'a>) -> ParseResult<'a, ()> {
+    let next_char = input.remaining.chars().next();
+    if let Some(next_char) = next_char {
+        if next_char.is_whitespace() {
+            let parser_state = input.advance(1, true);
+            return Ok((Token::new((), input.position, 1), parser_state));
+        }
+    }
+
+    let actual = next_char.unwrap_or(' ').to_string();
+    let error = "".to_string(); //TODO
+    Err(Error::new(
+        error,
+        actual,
+        input.position,
+        input.line_number,
+        input.line_position,
+    ))
 }
 
 fn panyrange_impl<'a>(
@@ -845,6 +865,23 @@ fn ptake_until<'a, Until: Clone + 'a>(until: impl Parser<'a, Until>) -> impl Par
         until,
         _phantom: std::marker::PhantomData,
     }
+}
+
+#[derive(Clone)]
+struct WhitespaceParser;
+
+impl<'a> Parser<'a, ()> for WhitespaceParser {
+    fn parse(&self, input: ContinuationState<'a>) -> ParseResult<'a, ()> {
+        pws_impl(input)
+    }
+}
+
+pub fn pws<'a>() -> impl Parser<'a, ()> {
+    WhitespaceParser
+}
+
+pub fn pws_many<'a>() -> impl Parser<'a, ()> {
+    pws().many().map(|_| ())
 }
 
 #[macro_export]

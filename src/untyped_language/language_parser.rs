@@ -22,7 +22,6 @@ const ALPHA_NUMERIC: [char; 63] = [
     'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', '_', '0', '1', '2', '3',
     '4', '5', '6', '7', '8', '9',
 ];
-const WS: [char; 4] = [' ', '\n', '\t', '\r'];
 
 pub(crate) fn pint<'a>() -> impl Parser<'a, Value> {
     let any_number = pany_range('0'..='9');
@@ -68,28 +67,24 @@ pub fn pidentifier<'a>() -> impl Parser<'a, String> {
     })
 }
 
-pub fn pws<'a>() -> impl Parser<'a, Vec<Token<char>>> {
-    pany(&WS).many()
-}
-
 fn pchar_ws<'a>(c: char) -> impl Parser<'a, char> {
-    pleft(pchar(c).then(pws()))
+    pleft(pchar(c).then(pws_many()))
 }
 
 fn pstring_ws(s: &str) -> impl Parser<&str> {
-    pleft(pstring(s).then(pws()))
+    pleft(pstring(s).then(pws_many()))
 }
 
 pub fn pterminator<'a>() -> impl Parser<'a, ()> {
     let psemi = pchar(';').map(|_| ());
-    pleft(psemi.then(pws()))
+    pleft(psemi.then(pws_many()))
 }
 
 pub fn pparam<'a>() -> impl Parser<'a, Parameter> {
-    let param_binding = pleft(pidentifier().then(pws()));
+    let param_binding = pleft(pidentifier().then(pws_many()));
     let param_binding = pleft(param_binding.then(pchar_ws(':')));
     let param_binding = param_binding.then(pidentifier());
-    let param_binding = pleft(param_binding.then(pws()));
+    let param_binding = pleft(param_binding.then(pws_many()));
     param_binding.map(|(name, type_)| Parameter(name, type_))
 }
 
@@ -106,10 +101,10 @@ pub fn pparams<'a>() -> impl Parser<'a, Vec<Token<Parameter>>> {
 pub fn plet<'a>() -> impl Parser<'a, ExprOrStatement> {
     let let_binding = pstring_ws("let");
     let let_binding = pright(let_binding.then(pidentifier()));
-    let let_binding = pleft(let_binding.then(pws()));
+    let let_binding = pleft(let_binding.then(pws_many()));
     let let_binding = pleft(let_binding.then(pchar_ws('=')));
     let let_binding = let_binding.then(pexpr());
-    let let_binding = pleft(let_binding.then(pws()));
+    let let_binding = pleft(let_binding.then(pws_many()));
     let_binding.map(|(name, value)| ExprOrStatement::Statement(Statement::Let(name, value)))
 }
 
@@ -119,7 +114,7 @@ pub fn pexpr<'a>() -> impl Parser<'a, Expr> {
 }
 
 pub fn pcall<'a>() -> impl Parser<'a, Expr> {
-    let call_binding = pleft(pidentifier().then(pws()));
+    let call_binding = pleft(pidentifier().then(pws_many()));
     let lparen = pchar_ws('(');
     let rparen = pchar_ws(')');
 
@@ -129,7 +124,7 @@ pub fn pcall<'a>() -> impl Parser<'a, Expr> {
     let params = params.between(lparen, rparen);
 
     let call_binding = call_binding.then(params);
-    let call_binding = pleft(call_binding.then(pws()));
+    let call_binding = pleft(call_binding.then(pws_many()));
     call_binding.map(|(name, params)| Expr::Call(name, params.value))
 }
 
@@ -148,12 +143,12 @@ pub fn pbody<'a>() -> impl Parser<'a, Vec<Token<ExprOrStatement>>> {
 pub fn pfun<'a>() -> impl Parser<'a, Fun> {
     let fun_binding = pstring_ws(FUN);
     let fun_binding = pright(fun_binding.then(pidentifier()));
-    let fun_binding = pleft(fun_binding.then(pws()));
+    let fun_binding = pleft(fun_binding.then(pws_many()));
     let fun_binding = fun_binding.then(pparams());
-    let fun_binding = pleft(fun_binding.then(pws()));
+    let fun_binding = pleft(fun_binding.then(pws_many()));
     let fun_binding = pleft(fun_binding.then(pstring_ws("->")));
     let fun_binding = fun_binding.then(pidentifier());
-    let fun_binding = pleft(fun_binding.then(pws()));
+    let fun_binding = pleft(fun_binding.then(pws_many()));
     let fun_binding = fun_binding.then(pbody());
 
     let fun_binding = fun_binding.map(|(name_and_params, body)| Fun {

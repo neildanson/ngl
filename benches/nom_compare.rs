@@ -22,14 +22,8 @@ enum Value<'a> {
     Array(Vec<Value<'a>>),
 }
 
-const WS: [char; 4] = [' ', '\n', '\t', '\r'];
-
-fn pws<'a>() -> impl Parser<'a, Vec<Token<char>>> {
-    pany(&WS).many()
-}
-
 fn pchar_ws<'a>(c: char) -> impl Parser<'a, char> {
-    pleft(pchar(c).then(pws()))
+    pleft(pchar(c).then(pws().many()))
 }
 
 fn pint<'a>() -> impl Parser<'a, Value<'a>> {
@@ -49,7 +43,7 @@ fn pint<'a>() -> impl Parser<'a, Value<'a>> {
 
 fn pquoted_string_raw<'a>() -> impl Parser<'a, &'a str> {
     let pquote = pchar('"');
-    pleft(pright(pquote.clone().then(pquote.take_until())).then(pws()))
+    pleft(pright(pquote.clone().then(pquote.take_until())).then(pws_many()))
 }
 
 fn pquoted_string<'a>() -> impl Parser<'a, Value<'a>> {
