@@ -33,7 +33,7 @@ pub trait Parser<'a, Output: 'a> {
         poptional(self)
     }
 
-    fn map<NextOutput: Clone + 'a, F: Fn(Output) -> NextOutput + 'a>(
+    fn map<NextOutput: 'a, F: Fn(Output) -> NextOutput + 'a>(
         self,
         f: F,
     ) -> impl Parser<'a, NextOutput>
@@ -75,9 +75,16 @@ pub trait Parser<'a, Output: 'a> {
         ptake_until(self)
     }
 
-    /*
-    
-    */
+    fn sep_by<Seperator: Clone + 'a>(
+        self,
+        separator: impl Parser<'a, Seperator> + Clone + 'a,
+    ) -> impl Parser<'a, Vec<Token<Output>>>
+    where
+        Self: Sized + 'a,
+        Self: Clone
+    {
+        psepby(self, separator)
+    }
 
     fn between<Left: Clone + 'a, Right: Clone + 'a>(
         self,
@@ -125,6 +132,7 @@ impl<'a, Output: 'a, T: Parser<'a, Vec<Token<Output>>> + 'a> Many<'a, Output> fo
     }
 }
 
+/*
 pub trait CloneableParser<'a, Output: Clone + 'a>: Clone {
     fn sep_by<Seperator: Clone + 'a>(self, separator: impl CloneableParser<'a, Seperator> + 'a)
         -> impl Parser<'a, Vec<Token<Output>>>;
@@ -140,6 +148,7 @@ impl<'a, Output: Clone + 'a, T: Parser<'a, Output> + Clone + 'a> CloneableParser
         psepby(self, separator)
     }
 }
+ */
 
 #[derive(Clone)]
 struct ClosureParser<'a, Output, F>
@@ -806,7 +815,7 @@ fn p1<'a, Output: 'a>(
 }
 
 #[derive(Clone)]
-struct SepByParser<'a, P, S, Output: Clone + 'a, Seperator: Clone + 'a>
+struct SepByParser<'a, P, S, Output: 'a, Seperator: 'a>
 where
     P: Parser<'a, Output>,
     S: Parser<'a, Seperator>,
@@ -816,7 +825,7 @@ where
     _phantom: std::marker::PhantomData<&'a (Output, Seperator)>,
 }
 
-impl<'a, P, S, Output: Clone + 'a, Seperator: Clone + 'a> Parser<'a, Vec<Token<Output>>>
+impl<'a, P, S, Output: 'a, Seperator: 'a> Parser<'a, Vec<Token<Output>>>
     for SepByParser<'a, P, S, Output, Seperator>
 where
     P: Parser<'a, Output> + Clone + 'a,
@@ -839,7 +848,7 @@ where
     }
 }
 
-fn psepby<'a, Output: Clone + 'a, Seperator: Clone + 'a>(
+fn psepby<'a, Output: 'a, Seperator: 'a>(
     parser: impl Parser<'a, Output> + Clone + 'a,
     separator: impl Parser<'a, Seperator> + Clone + 'a,
 ) -> impl Parser<'a, Vec<Token<Output>>> {
