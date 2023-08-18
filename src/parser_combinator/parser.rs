@@ -75,7 +75,8 @@ pub trait Parser<'a, Output: 'a> {
         ptake_until(self)
     }
 
-    fn sep_by<Seperator: Clone + 'a>(
+    /*
+    fn sep_by<Seperator: 'a>(
         self,
         separator: impl Parser<'a, Seperator> + Clone + 'a,
     ) -> impl Parser<'a, Vec<Token<Output>>>
@@ -85,6 +86,7 @@ pub trait Parser<'a, Output: 'a> {
     {
         psepby(self, separator)
     }
+    */
 
     fn between<Left: Clone + 'a, Right: Clone + 'a>(
         self,
@@ -132,15 +134,15 @@ impl<'a, Output: 'a, T: Parser<'a, Vec<Token<Output>>> + 'a> Many<'a, Output> fo
     }
 }
 
-/*
+
 pub trait CloneableParser<'a, Output: Clone + 'a>: Clone {
-    fn sep_by<Seperator: Clone + 'a>(self, separator: impl CloneableParser<'a, Seperator> + 'a)
+    fn sep_by<Seperator: Clone + 'a>(self, separator: impl Parser<'a, Seperator> + Clone + 'a)
         -> impl Parser<'a, Vec<Token<Output>>>;
 }
 impl<'a, Output: Clone + 'a, T: Parser<'a, Output> + Clone + 'a> CloneableParser<'a, Output> for T {
     fn sep_by<Seperator: Clone + 'a>(
         self,
-        separator: impl CloneableParser<'a, Seperator> + 'a,
+        separator: impl Parser<'a, Seperator> + Clone + 'a,
     ) -> impl Parser<'a, Vec<Token<Output>>>
     where
         Self: Sized + 'a,
@@ -148,7 +150,7 @@ impl<'a, Output: Clone + 'a, T: Parser<'a, Output> + Clone + 'a> CloneableParser
         psepby(self, separator)
     }
 }
- */
+
 
 #[derive(Clone)]
 struct ClosureParser<'a, Output, F>
