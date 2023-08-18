@@ -104,6 +104,23 @@ pub trait Parser<'a, Output: Clone + 'a>: Clone {
     */
 }
 
+pub trait PairParser<'a, Left: Clone + 'a, Right: Clone + 'a> {
+    fn left(self) -> impl Parser<'a, Left>;
+    fn right(self) -> impl Parser<'a, Right>;
+}
+
+impl<'a, Left: Clone + 'a, Right: Clone + 'a, T: Parser<'a, (Token<Left>, Token<Right>)> + 'a>
+    PairParser<'a, Left, Right> for T
+{
+    fn left(self) -> impl Parser<'a, Left> {
+        pleft(self)
+    }
+
+    fn right(self) -> impl Parser<'a, Right> {
+        pright(self)
+    }
+}
+
 #[derive(Clone)]
 struct ClosureParser<'a, Output, F>
 where
