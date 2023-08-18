@@ -11,18 +11,6 @@ const TRUE: &str = "true";
 const FALSE: &str = "false";
 const _RESERVED: [&str; 6] = [FUN, _LET, _IF, _ELSE, TRUE, FALSE];
 
-const ALPHA: [char; 53] = [
-    'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S',
-    'T', 'U', 'V', 'W', 'X', 'Y', 'Z', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l',
-    'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', '_',
-];
-const ALPHA_NUMERIC: [char; 63] = [
-    'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S',
-    'T', 'U', 'V', 'W', 'X', 'Y', 'Z', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l',
-    'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', '_', '0', '1', '2', '3',
-    '4', '5', '6', '7', '8', '9',
-];
-
 pub(crate) fn pint<'a>() -> impl Parser<'a, Value> {
     let any_number = pany_range('0'..='9');
     let many_numbers = any_number.many1();
@@ -56,8 +44,14 @@ fn pvalue<'a>() -> impl Parser<'a, Value> {
 
 //TODO disallow reserved words
 pub fn pidentifier<'a>() -> impl Parser<'a, String> {
-    let ident = pany(&ALPHA);
-    let alpha_numeric = pany(&ALPHA_NUMERIC).many();
+    let ident = pany_range('a'..='z')
+        .or(pany_range('A'..='Z'))
+        .or(pchar('_'));
+    let alpha_numeric = pany_range('a'..='z')
+        .or(pany_range('A'..='Z'))
+        .or(pany_range('0'..='9'))
+        .or(pchar('_'))
+        .many();
     let ident = ident.then(alpha_numeric);
 
     ident.map(|(start, rest)| {
