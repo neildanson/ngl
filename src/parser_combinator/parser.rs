@@ -738,10 +738,15 @@ where
     S: Parser<'a, Seperator> + 'a,
 {
     fn parse(&self, input: ContinuationState<'a>) -> ParseResult<'a, Vec<Token<Output>>> {
-        let parser_combined = pleft(pthen(self.parser.clone(), self.separator.clone()));
-        let parser_many = pmany(parser_combined);
-        let parser_many_then = pthen(parser_many, self.parser.clone());
-        let parser = pmap(parser_many_then, |(mut tokens, token)| {
+        let parser = self
+            .parser
+            .clone()
+            .then(self.separator.clone())
+            .left()
+            .many()
+            .then(self.parser.clone());
+
+        let parser = parser.map(|(mut tokens, token)| {
             tokens.value.push(token);
             tokens.value
         });
