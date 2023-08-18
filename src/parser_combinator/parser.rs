@@ -91,17 +91,6 @@ pub trait Parser<'a, Output: Clone + 'a>: Clone {
     {
         pbetween(parser1, self, parser2)
     }
-
-    /*
-    todo - left, right, at_least_one
-
-    fn at_least_one(self) -> impl Parser<'a, Vec<Token<Output>>>
-    where
-        Self: Sized + 'a,
-    {
-        p1(self)
-    }
-    */
 }
 
 pub trait PairParser<'a, Left: Clone + 'a, Right: Clone + 'a> {
@@ -699,9 +688,7 @@ fn pbetween<'a, Left: Clone + 'a, Output: Clone + 'a, Right: Clone + 'a>(
     parser2: impl Parser<'a, Output> + 'a,
     parser3: impl Parser<'a, Right> + 'a,
 ) -> impl Parser<'a, Output> {
-    let parser = pthen(parser1, pthen(parser2, parser3));
-    let parser = pright(parser); //Skip T
-    pleft(parser) //Ignore U
+    parser1.then(parser2.then(parser3)).right().left()
 }
 
 #[derive(Clone)]
