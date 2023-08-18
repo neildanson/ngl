@@ -3,9 +3,55 @@ use std::{
     ops::Add,
 };
 
+#[derive(Clone, PartialEq)]
+pub enum Expected {
+    Char(char),
+    String(String),
+    Range(char, char),
+}
+
+impl Add for Expected {
+    type Output = Expected;
+    fn add(self, rhs: Self) -> Self::Output {
+        match (self, rhs) {
+            (Expected::Char(c1), Expected::Char(c2)) => Expected::String(format!("{}{}", c1, c2)),
+            (Expected::Char(c1), Expected::String(s2)) => Expected::String(format!("{}{}", c1, s2)),
+            (Expected::String(s1), Expected::Char(c2)) => Expected::String(format!("{}{}", s1, c2)),
+            (Expected::String(s1), Expected::String(s2)) => {
+                Expected::String(format!("{}{}", s1, s2))
+            }
+            (Expected::Char(c1), Expected::Range(start, end)) => {
+                Expected::String(format!("{}{}-{}", c1, start, end))
+            }
+            (Expected::Range(start, end), Expected::Char(c2)) => {
+                Expected::String(format!("{}-{}{}", start, end, c2))
+            }
+            (Expected::String(s1), Expected::Range(start, end)) => {
+                Expected::String(format!("{}{}-{}", s1, start, end))
+            }
+            (Expected::Range(start, end), Expected::String(s2)) => {
+                Expected::String(format!("{}-{}{}", start, end, s2))
+            }
+            (Expected::Range(start1, end1), Expected::Range(start2, end2)) => {
+                Expected::String(format!("{}-{}{}-{}", start1, end1, start2, end2))
+            }
+        }
+    }
+}
+
+impl Display for Expected {
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+        match self {
+            Expected::Char(c) => write!(f, "'{}'", c),
+            Expected::String(s) => write!(f, "'{}'", s),
+            Expected::Range(start, end) => write!(f, "between '{}' and '{}'", start, end),
+        }
+    }
+}
+
 #[derive(PartialEq)]
 pub struct Error {
-    pub expected: String,
+    pub expected: Expected,
     pub actual: String,
     pub position: usize,
     pub line_number: usize,
@@ -14,7 +60,7 @@ pub struct Error {
 
 impl Error {
     pub fn new(
-        expected: String,
+        expected: Expected,
         actual: String,
         position: usize,
         line_number: usize,
@@ -55,7 +101,7 @@ impl Add for Error {
     type Output = Error;
 
     fn add(self, other: Error) -> Self::Output {
-        let expected = self.expected.clone() + " or " + &other.expected;
+        let expected = self.expected + other.expected;
         let actual = other.actual.clone();
         let position = other.position;
         let line_number = other.line_number;
