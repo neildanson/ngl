@@ -102,6 +102,33 @@ pub trait Parser<'a, Output: Clone + 'a>: Clone {
     }
 }
 
+pub trait Pair<'a, Left: Clone + 'a, Right: Clone + 'a> {
+    fn left(self) -> impl Parser<'a, Left>;
+    fn right(self) -> impl Parser<'a, Right>;
+}
+
+impl<'a, Left: Clone + 'a, Right: Clone + 'a, T: Parser<'a, (Token<Left>, Token<Right>)> + 'a>
+    Pair<'a, Left, Right> for T
+{
+    fn left(self) -> impl Parser<'a, Left> {
+        pleft(self)
+    }
+
+    fn right(self) -> impl Parser<'a, Right> {
+        pright(self)
+    }
+}
+
+pub trait Many<'a, Output: Clone + 'a> {
+    fn at_least_one(self) -> impl Parser<'a, Vec<Token<Output>>>;
+}
+
+impl<'a, Output: Clone + 'a, T: Parser<'a, Vec<Token<Output>>> + 'a> Many<'a, Output> for T {
+    fn at_least_one(self) -> impl Parser<'a, Vec<Token<Output>>> {
+        p1(self)
+    }
+}
+
 #[derive(Clone)]
 struct ClosureParser<'a, Output, F>
 where
@@ -692,7 +719,7 @@ impl<'a, Left: Clone + 'a, Right: Clone + 'a, P: Parser<'a, (Token<Left>, Token<
     }
 }
 
-pub fn pleft<'a, Left: Clone + 'a, Right: Clone + 'a>(
+fn pleft<'a, Left: Clone + 'a, Right: Clone + 'a>(
     parser: impl Parser<'a, (Token<Left>, Token<Right>)> + 'a,
 ) -> impl Parser<'a, Left> {
     LeftParser {
@@ -722,7 +749,7 @@ impl<'a, Left: Clone + 'a, Right: Clone + 'a, P: Parser<'a, (Token<Left>, Token<
     }
 }
 
-pub fn pright<'a, Left: Clone + 'a, Right: Clone + 'a>(
+fn pright<'a, Left: Clone + 'a, Right: Clone + 'a>(
     parser: impl Parser<'a, (Token<Left>, Token<Right>)> + 'a,
 ) -> impl Parser<'a, Right> {
     RightParser {
@@ -736,9 +763,7 @@ fn pbetween<'a, Left: Clone + 'a, Output: Clone + 'a, Right: Clone + 'a>(
     parser2: impl Parser<'a, Output> + 'a,
     parser3: impl Parser<'a, Right> + 'a,
 ) -> impl Parser<'a, Output> {
-    let parser = pthen(parser1, pthen(parser2, parser3));
-    let parser = pright(parser); //Skip T
-    pleft(parser) //Ignore U
+    parser1.then(parser2.then(parser3)).right().left()
 }
 
 #[derive(Clone)]
@@ -759,7 +784,7 @@ where
     }
 }
 
-pub fn p1<'a, Output: Clone + 'a>(
+fn p1<'a, Output: Clone + 'a>(
     parser: impl Parser<'a, Vec<Token<Output>>> + 'a,
 ) -> impl Parser<'a, Vec<Token<Output>>> {
     {
@@ -788,10 +813,15 @@ where
     S: Parser<'a, Seperator> + 'a,
 {
     fn parse(&self, input: ContinuationState<'a>) -> ParseResult<'a, Vec<Token<Output>>> {
-        let parser_combined = pleft(pthen(self.parser.clone(), self.separator.clone()));
-        let parser_many = pmany(parser_combined);
-        let parser_many_then = pthen(parser_many, self.parser.clone());
-        let parser = pmap(parser_many_then, |(mut tokens, token)| {
+        let parser = self
+            .parser
+            .clone()
+            .then(self.separator.clone())
+            .left()
+            .many()
+            .then(self.parser.clone());
+
+        let parser = parser.map(|(mut tokens, token)| {
             tokens.value.push(token);
             tokens.value
         });
@@ -813,7 +843,7 @@ fn psepby<'a, Output: Clone + 'a, Seperator: Clone + 'a>(
 fn pmany1<'a, Output: Clone + 'a>(
     parser: impl Parser<'a, Output> + 'a,
 ) -> impl Parser<'a, Vec<Token<Output>>> {
-    p1(pmany(parser))
+    parser.many().at_least_one()
 }
 
 #[derive(Clone)]
@@ -881,7 +911,7 @@ pub fn pws<'a>() -> impl Parser<'a, ()> {
     WhitespaceParser
 }
 
-pub fn pws_many<'a>() -> impl Parser<'a, ()> {
+fn pws_many<'a>() -> impl Parser<'a, ()> {
     pws().many().map(|_| ())
 }
 
