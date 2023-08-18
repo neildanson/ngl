@@ -1,4 +1,4 @@
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Debug, PartialEq)]
 pub struct Token<T> {
     pub value: T,
     pub start: usize,
@@ -11,6 +11,16 @@ impl<T> Token<T> {
             value,
             start,
             length,
+        }
+    }
+}
+
+impl<T:Clone> Clone for Token<T> {
+    fn clone(&self) -> Self {
+        Self {
+            value: self.value.clone(),
+            start: self.start,
+            length: self.length,
         }
     }
 }

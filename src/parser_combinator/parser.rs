@@ -7,9 +7,9 @@ use crate::{
 
 pub type ParseResult<'a, Output> = Result<(Token<Output>, ContinuationState<'a>), Error>;
 
-pub trait Parser<'a, Output: Clone + 'a>: Clone {
+pub trait Parser<'a, Output: 'a> {
     fn parse(&self, input: ContinuationState<'a>) -> ParseResult<'a, Output>;
-    fn then<NextOutput: Clone + 'a>(
+    fn then<NextOutput: 'a>(
         self,
         next: impl Parser<'a, NextOutput> + 'a,
     ) -> impl Parser<'a, (Token<Output>, Token<NextOutput>)>
@@ -59,13 +59,7 @@ pub trait Parser<'a, Output: Clone + 'a>: Clone {
         pmany1(self)
     }
 
-    fn take_until(self) -> impl Parser<'a, &'a str>
-    where
-        Self: Sized + 'a,
-    {
-        ptake_until(self)
-    }
-
+    
     fn any(valid_chars: &'a [char]) -> impl Parser<'a, char>
     where
         Self: Sized + 'a,
@@ -73,15 +67,17 @@ pub trait Parser<'a, Output: Clone + 'a>: Clone {
         pany(valid_chars)
     }
 
-    fn sep_by<Seperator: Clone + 'a>(
-        self,
-        separator: impl Parser<'a, Seperator> + 'a,
-    ) -> impl Parser<'a, Vec<Token<Output>>>
+    
+    fn take_until(self) -> impl Parser<'a, &'a str>
     where
         Self: Sized + 'a,
     {
-        psepby(self, separator)
+        ptake_until(self)
     }
+
+    /*
+    
+    */
 
     fn between<Left: Clone + 'a, Right: Clone + 'a>(
         self,
@@ -102,12 +98,12 @@ pub trait Parser<'a, Output: Clone + 'a>: Clone {
     }
 }
 
-pub trait Pair<'a, Left: Clone + 'a, Right: Clone + 'a> {
+pub trait Pair<'a, Left: 'a, Right: 'a> {
     fn left(self) -> impl Parser<'a, Left>;
     fn right(self) -> impl Parser<'a, Right>;
 }
 
-impl<'a, Left: Clone + 'a, Right: Clone + 'a, T: Parser<'a, (Token<Left>, Token<Right>)> + 'a>
+impl<'a, Left: 'a, Right: 'a, T: Parser<'a, (Token<Left>, Token<Right>)> + 'a>
     Pair<'a, Left, Right> for T
 {
     fn left(self) -> impl Parser<'a, Left> {
@@ -119,13 +115,29 @@ impl<'a, Left: Clone + 'a, Right: Clone + 'a, T: Parser<'a, (Token<Left>, Token<
     }
 }
 
-pub trait Many<'a, Output: Clone + 'a> {
+pub trait Many<'a, Output: 'a> {
     fn at_least_one(self) -> impl Parser<'a, Vec<Token<Output>>>;
 }
 
-impl<'a, Output: Clone + 'a, T: Parser<'a, Vec<Token<Output>>> + 'a> Many<'a, Output> for T {
+impl<'a, Output: 'a, T: Parser<'a, Vec<Token<Output>>> + 'a> Many<'a, Output> for T {
     fn at_least_one(self) -> impl Parser<'a, Vec<Token<Output>>> {
         p1(self)
+    }
+}
+
+pub trait CloneableParser<'a, Output: Clone + 'a>: Clone {
+    fn sep_by<Seperator: Clone + 'a>(self, separator: impl CloneableParser<'a, Seperator> + 'a)
+        -> impl Parser<'a, Vec<Token<Output>>>;
+}
+impl<'a, Output: Clone + 'a, T: Parser<'a, Output> + Clone + 'a> CloneableParser<'a, Output> for T {
+    fn sep_by<Seperator: Clone + 'a>(
+        self,
+        separator: impl CloneableParser<'a, Seperator> + 'a,
+    ) -> impl Parser<'a, Vec<Token<Output>>>
+    where
+        Self: Sized + 'a,
+    {
+        psepby(self, separator)
     }
 }
 
@@ -213,7 +225,7 @@ fn pstring_impl<'a>(value: &'a str, input: ContinuationState<'a>) -> ParseResult
     }
 }
 
-fn pthen_impl<'a, Left: Clone + 'a, Right: Clone + 'a>(
+fn pthen_impl<'a, Left: 'a, Right: 'a>(
     parser1: &impl Parser<'a, Left>,
     parser2: &impl Parser<'a, Right>,
     input: ContinuationState<'a>,
@@ -233,7 +245,7 @@ fn pthen_impl<'a, Left: Clone + 'a, Right: Clone + 'a>(
     })
 }
 
-fn por_impl<'a, Output: Clone + 'a>(
+fn por_impl<'a, Output: 'a>(
     parser1: &impl Parser<'a, Output>,
     parser2: &impl Parser<'a, Output>,
     input: ContinuationState<'a>,
@@ -257,7 +269,7 @@ fn por_impl<'a, Output: Clone + 'a>(
     })
 }
 
-fn poptional_impl<'a, Output: Clone + 'a>(
+fn poptional_impl<'a, Output: 'a>(
     parser: &impl Parser<'a, Output>,
     input: ContinuationState<'a>,
 ) -> ParseResult<'a, Option<Output>> {
@@ -271,14 +283,13 @@ fn poptional_impl<'a, Output: Clone + 'a>(
     }
 }
 
-fn pmap_impl<'a, Input: Clone + 'a, Output, F>(
+fn pmap_impl<'a, Input: 'a, Output, F>(
     parser: &impl Parser<'a, Input>,
     f: &F,
     input: ContinuationState<'a>,
 ) -> ParseResult<'a, Output>
 where
     F: Fn(Input) -> Output,
-    F: Clone,
 {
     let result = parser.parse(input);
     result.map(|(token, state)| {
@@ -371,7 +382,7 @@ fn pany_impl<'a>(valid_chars: &[char], input: ContinuationState<'a>) -> ParseRes
     ))
 }
 
-fn pmany_impl<'a, Output: Clone + 'a>(
+fn pmany_impl<'a, Output: 'a>(
     parser: &impl Parser<'a, Output>,
     input: ContinuationState<'a>,
 ) -> ParseResult<'a, Vec<Token<Output>>> {
@@ -398,7 +409,7 @@ fn pmany_impl<'a, Output: Clone + 'a>(
     }
 }
 
-fn pleft_impl<'a, Left: Clone + 'a, Right: Clone + 'a>(
+fn pleft_impl<'a, Left: 'a, Right: 'a>(
     parser: &impl Parser<'a, (Token<Left>, Token<Right>)>,
     input: ContinuationState<'a>,
 ) -> ParseResult<'a, Left> {
@@ -409,7 +420,7 @@ fn pleft_impl<'a, Left: Clone + 'a, Right: Clone + 'a>(
     })
 }
 
-fn pright_impl<'a, Left: Clone + 'a, Right: Clone + 'a>(
+fn pright_impl<'a, Left: 'a, Right: 'a>(
     parser: &impl Parser<'a, (Token<Left>, Token<Right>)>,
     input: ContinuationState<'a>,
 ) -> ParseResult<'a, Right> {
@@ -420,7 +431,7 @@ fn pright_impl<'a, Left: Clone + 'a, Right: Clone + 'a>(
     })
 }
 
-fn p1_impl<'a, Output: Clone + 'a>(
+fn p1_impl<'a, Output: 'a>(
     parser: &impl Parser<'a, Vec<Token<Output>>>,
     input: ContinuationState<'a>,
 ) -> ParseResult<'a, Vec<Token<Output>>> {
@@ -443,7 +454,7 @@ fn p1_impl<'a, Output: Clone + 'a>(
     }
 }
 
-fn pchoice_impl<'a, Output: Clone + 'a>(
+fn pchoice_impl<'a, Output: 'a>(
     parsers: &[impl Parser<'a, Output>],
     input: ContinuationState<'a>,
 ) -> ParseResult<'a, Output> {
@@ -465,7 +476,7 @@ fn pchoice_impl<'a, Output: Clone + 'a>(
 }
 
 //TODO deal with case where string is never termianted
-fn ptakeuntil_impl<'a, Until: Clone + 'a>(
+fn ptakeuntil_impl<'a, Until: 'a>(
     until: &impl Parser<'a, Until>,
     start: Option<ContinuationState<'a>>,
     input: ContinuationState<'a>,
@@ -521,8 +532,8 @@ pub fn pstring(value: &str) -> impl Parser<'_, &str> {
 #[derive(Clone)]
 struct ThenParser<
     'a,
-    Left: Clone + 'a,
-    Right: Clone + 'a,
+    Left: 'a,
+    Right: 'a,
     P1: Parser<'a, Left>,
     P2: Parser<'a, Right>,
 > {
@@ -531,7 +542,7 @@ struct ThenParser<
     _phantom: std::marker::PhantomData<&'a (Left, Right)>,
 }
 
-impl<'a, Left: Clone, Right: Clone, P1, P2> Parser<'a, (Token<Left>, Token<Right>)>
+impl<'a, Left, Right, P1, P2> Parser<'a, (Token<Left>, Token<Right>)>
     for ThenParser<'a, Left, Right, P1, P2>
 where
     P1: Parser<'a, Left>,
@@ -542,7 +553,7 @@ where
     }
 }
 
-fn pthen<'a, Left: Clone + 'a, Right: Clone + 'a>(
+fn pthen<'a, Left: 'a, Right: 'a>(
     parser1: impl Parser<'a, Left> + 'a,
     parser2: impl Parser<'a, Right> + 'a,
 ) -> impl Parser<'a, (Token<Left>, Token<Right>)> {
@@ -554,13 +565,13 @@ fn pthen<'a, Left: Clone + 'a, Right: Clone + 'a>(
 }
 
 #[derive(Clone)]
-struct OrParser<'a, Output: Clone + 'a, P1: Parser<'a, Output>, P2: Parser<'a, Output>> {
+struct OrParser<'a, Output:'a, P1: Parser<'a, Output>, P2: Parser<'a, Output>> {
     parser1: P1,
     parser2: P2,
     _phantom: std::marker::PhantomData<&'a Output>,
 }
 
-impl<'a, Output: Clone, P1, P2> Parser<'a, Output> for OrParser<'a, Output, P1, P2>
+impl<'a, Output, P1, P2> Parser<'a, Output> for OrParser<'a, Output, P1, P2>
 where
     P1: Parser<'a, Output>,
     P2: Parser<'a, Output>,
@@ -570,7 +581,7 @@ where
     }
 }
 
-fn por<'a, Output: Clone + 'a>(
+fn por<'a, Output: 'a>(
     parser1: impl Parser<'a, Output> + 'a,
     parser2: impl Parser<'a, Output> + 'a,
 ) -> impl Parser<'a, Output> {
@@ -582,12 +593,12 @@ fn por<'a, Output: Clone + 'a>(
 }
 
 #[derive(Clone)]
-struct OptionalParser<'a, Output: Clone + 'a, P: Parser<'a, Output>> {
+struct OptionalParser<'a, Output: 'a, P: Parser<'a, Output>> {
     parser: P,
     _phantom: std::marker::PhantomData<&'a Output>,
 }
 
-impl<'a, Output: Clone, P> Parser<'a, Option<Output>> for OptionalParser<'a, Output, P>
+impl<'a, Output, P> Parser<'a, Option<Output>> for OptionalParser<'a, Output, P>
 where
     P: Parser<'a, Output>,
 {
@@ -596,7 +607,7 @@ where
     }
 }
 
-fn poptional<'a, Output: Clone + 'a>(
+fn poptional<'a, Output: 'a>(
     parser: impl Parser<'a, Output> + 'a,
 ) -> impl Parser<'a, Option<Output>> {
     OptionalParser {
@@ -636,34 +647,33 @@ pub fn pany_range<'a>(valid_chars: RangeInclusive<char>) -> impl Parser<'a, char
 }
 
 #[derive(Clone)]
-struct MapParser<'a, Input: Clone + 'a, Output: Clone + 'a, P: Parser<'a, Input>, F>
+struct MapParser<'a, Input: 'a, Output: 'a, P: Parser<'a, Input>, F>
 where
     F: Fn(Input) -> Output,
-    F: Clone + 'a,
+    F: 'a,
 {
     parser: P,
     f: F,
     _phantom: std::marker::PhantomData<&'a (Input, Output)>,
 }
 
-impl<'a, Input: Clone + 'a, Output: Clone + 'a, P: Parser<'a, Input>, F> Parser<'a, Output>
+impl<'a, Input: 'a, Output: 'a, P: Parser<'a, Input>, F> Parser<'a, Output>
     for MapParser<'a, Input, Output, P, F>
 where
     F: Fn(Input) -> Output,
-    F: Clone + 'a,
 {
     fn parse(&self, input: ContinuationState<'a>) -> ParseResult<'a, Output> {
         pmap_impl(&self.parser, &self.f, input)
     }
 }
 
-fn pmap<'a, Input: Clone + 'a, Output: Clone + 'a, F>(
+fn pmap<'a, Input: 'a, Output: 'a, F>(
     parser: impl Parser<'a, Input> + 'a,
     f: F,
 ) -> impl Parser<'a, Output>
 where
     F: Fn(Input) -> Output,
-    F: Clone + 'a,
+    F: 'a,
 {
     MapParser {
         parser,
@@ -673,12 +683,12 @@ where
 }
 
 #[derive(Clone)]
-struct ManyParser<'a, Output: Clone + 'a, P: Parser<'a, Output>> {
+struct ManyParser<'a, Output: 'a, P: Parser<'a, Output>> {
     parser: P,
     _phantom: std::marker::PhantomData<&'a Output>,
 }
 
-impl<'a, Output: Clone + 'a, P> Parser<'a, Vec<Token<Output>>> for ManyParser<'a, Output, P>
+impl<'a, Output: 'a, P> Parser<'a, Vec<Token<Output>>> for ManyParser<'a, Output, P>
 where
     P: Parser<'a, Output>,
 {
@@ -687,7 +697,7 @@ where
     }
 }
 
-fn pmany<'a, Output: Clone + 'a>(
+fn pmany<'a, Output: 'a>(
     parser: impl Parser<'a, Output> + 'a,
 ) -> impl Parser<'a, Vec<Token<Output>>> {
     {
@@ -701,8 +711,8 @@ fn pmany<'a, Output: Clone + 'a>(
 #[derive(Clone)]
 struct LeftParser<
     'a,
-    Left: Clone + 'a,
-    Right: Clone + 'a,
+    Left: 'a,
+    Right: 'a,
     P: Parser<'a, (Token<Left>, Token<Right>)>,
 > where
     P: Parser<'a, (Token<Left>, Token<Right>)>,
@@ -711,7 +721,7 @@ struct LeftParser<
     _phantom: std::marker::PhantomData<&'a (Left, Right)>,
 }
 
-impl<'a, Left: Clone + 'a, Right: Clone + 'a, P: Parser<'a, (Token<Left>, Token<Right>)>>
+impl<'a, Left: 'a, Right: 'a, P: Parser<'a, (Token<Left>, Token<Right>)>>
     Parser<'a, Left> for LeftParser<'a, Left, Right, P>
 {
     fn parse(&self, input: ContinuationState<'a>) -> ParseResult<'a, Left> {
@@ -719,7 +729,7 @@ impl<'a, Left: Clone + 'a, Right: Clone + 'a, P: Parser<'a, (Token<Left>, Token<
     }
 }
 
-fn pleft<'a, Left: Clone + 'a, Right: Clone + 'a>(
+fn pleft<'a, Left: 'a, Right: 'a>(
     parser: impl Parser<'a, (Token<Left>, Token<Right>)> + 'a,
 ) -> impl Parser<'a, Left> {
     LeftParser {
@@ -731,8 +741,8 @@ fn pleft<'a, Left: Clone + 'a, Right: Clone + 'a>(
 #[derive(Clone)]
 struct RightParser<
     'a,
-    Left: Clone + 'a,
-    Right: Clone + 'a,
+    Left: 'a,
+    Right: 'a,
     P: Parser<'a, (Token<Left>, Token<Right>)>,
 > where
     P: Parser<'a, (Token<Left>, Token<Right>)>,
@@ -741,7 +751,7 @@ struct RightParser<
     _phantom: std::marker::PhantomData<&'a (Left, Right)>,
 }
 
-impl<'a, Left: Clone + 'a, Right: Clone + 'a, P: Parser<'a, (Token<Left>, Token<Right>)>>
+impl<'a, Left: 'a, Right: 'a, P: Parser<'a, (Token<Left>, Token<Right>)>>
     Parser<'a, Right> for RightParser<'a, Left, Right, P>
 {
     fn parse(&self, input: ContinuationState<'a>) -> ParseResult<'a, Right> {
@@ -749,7 +759,7 @@ impl<'a, Left: Clone + 'a, Right: Clone + 'a, P: Parser<'a, (Token<Left>, Token<
     }
 }
 
-fn pright<'a, Left: Clone + 'a, Right: Clone + 'a>(
+fn pright<'a, Left: 'a, Right: 'a>(
     parser: impl Parser<'a, (Token<Left>, Token<Right>)> + 'a,
 ) -> impl Parser<'a, Right> {
     RightParser {
@@ -758,7 +768,7 @@ fn pright<'a, Left: Clone + 'a, Right: Clone + 'a>(
     }
 }
 
-fn pbetween<'a, Left: Clone + 'a, Output: Clone + 'a, Right: Clone + 'a>(
+fn pbetween<'a, Left: 'a, Output: 'a, Right: 'a>(
     parser1: impl Parser<'a, Left> + 'a,
     parser2: impl Parser<'a, Output> + 'a,
     parser3: impl Parser<'a, Right> + 'a,
@@ -767,7 +777,7 @@ fn pbetween<'a, Left: Clone + 'a, Output: Clone + 'a, Right: Clone + 'a>(
 }
 
 #[derive(Clone)]
-struct OneParser<'a, P, Output: Clone>
+struct OneParser<'a, P, Output>
 where
     P: Parser<'a, Vec<Token<Output>>>,
 {
@@ -775,7 +785,7 @@ where
     _phantom: std::marker::PhantomData<&'a Output>,
 }
 
-impl<'a, P, Output: Clone> Parser<'a, Vec<Token<Output>>> for OneParser<'a, P, Output>
+impl<'a, P, Output> Parser<'a, Vec<Token<Output>>> for OneParser<'a, P, Output>
 where
     P: Parser<'a, Vec<Token<Output>>>,
 {
@@ -784,7 +794,7 @@ where
     }
 }
 
-fn p1<'a, Output: Clone + 'a>(
+fn p1<'a, Output: 'a>(
     parser: impl Parser<'a, Vec<Token<Output>>> + 'a,
 ) -> impl Parser<'a, Vec<Token<Output>>> {
     {
@@ -809,8 +819,8 @@ where
 impl<'a, P, S, Output: Clone + 'a, Seperator: Clone + 'a> Parser<'a, Vec<Token<Output>>>
     for SepByParser<'a, P, S, Output, Seperator>
 where
-    P: Parser<'a, Output> + 'a,
-    S: Parser<'a, Seperator> + 'a,
+    P: Parser<'a, Output> + Clone + 'a,
+    S: Parser<'a, Seperator> + Clone + 'a,
 {
     fn parse(&self, input: ContinuationState<'a>) -> ParseResult<'a, Vec<Token<Output>>> {
         let parser = self
@@ -830,8 +840,8 @@ where
 }
 
 fn psepby<'a, Output: Clone + 'a, Seperator: Clone + 'a>(
-    parser: impl Parser<'a, Output> + 'a,
-    separator: impl Parser<'a, Seperator> + 'a,
+    parser: impl Parser<'a, Output> + Clone + 'a,
+    separator: impl Parser<'a, Seperator> + Clone + 'a,
 ) -> impl Parser<'a, Vec<Token<Output>>> {
     SepByParser {
         parser,
@@ -840,14 +850,14 @@ fn psepby<'a, Output: Clone + 'a, Seperator: Clone + 'a>(
     }
 }
 
-fn pmany1<'a, Output: Clone + 'a>(
+fn pmany1<'a, Output: 'a>(
     parser: impl Parser<'a, Output> + 'a,
 ) -> impl Parser<'a, Vec<Token<Output>>> {
     parser.many().at_least_one()
 }
 
 #[derive(Clone)]
-struct ChoiceParser<'a, P, Output: Clone + 'a>
+struct ChoiceParser<'a, P, Output: 'a>
 where
     P: Parser<'a, Output>,
 {
@@ -855,7 +865,7 @@ where
     _phantom: std::marker::PhantomData<&'a Output>,
 }
 
-impl<'a, P, Output: Clone> Parser<'a, Output> for ChoiceParser<'a, P, Output>
+impl<'a, P, Output> Parser<'a, Output> for ChoiceParser<'a, P, Output>
 where
     P: Parser<'a, Output>,
 {
@@ -864,7 +874,7 @@ where
     }
 }
 
-pub fn pchoice<'a, Output: Clone + 'a>(
+pub fn pchoice<'a, Output: 'a>(
     parsers: Vec<impl Parser<'a, Output>>,
 ) -> impl Parser<'a, Output> {
     ChoiceParser {
@@ -874,7 +884,7 @@ pub fn pchoice<'a, Output: Clone + 'a>(
 }
 
 #[derive(Clone)]
-struct TakeUntilParser<'a, P, Until: Clone>
+struct TakeUntilParser<'a, P, Until>
 where
     P: Parser<'a, Until>,
 {
@@ -882,7 +892,7 @@ where
     _phantom: std::marker::PhantomData<&'a Until>,
 }
 
-impl<'a, P, Until: Clone> Parser<'a, &'a str> for TakeUntilParser<'a, P, Until>
+impl<'a, P, Until> Parser<'a, &'a str> for TakeUntilParser<'a, P, Until>
 where
     P: Parser<'a, Until>,
 {
@@ -891,7 +901,7 @@ where
     }
 }
 
-fn ptake_until<'a, Until: Clone + 'a>(until: impl Parser<'a, Until>) -> impl Parser<'a, &'a str> {
+fn ptake_until<'a, Until:  'a>(until: impl Parser<'a, Until>) -> impl Parser<'a, &'a str> {
     TakeUntilParser {
         until,
         _phantom: std::marker::PhantomData,
