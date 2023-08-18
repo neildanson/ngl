@@ -81,7 +81,7 @@ impl<'a> Display for Expected<'a> {
     }
 }
 
-#[derive(PartialEq)]
+#[derive(PartialEq, Debug)]
 pub struct Error<'a> {
     pub expected: Expected<'a>,
     pub actual: String,
@@ -123,11 +123,13 @@ impl<'a> Display for Error<'a> {
     }
 }
 
+/*
 impl<'a> Debug for Error<'a> {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         write!(f, "{}", self.format_error())
     }
 }
+ */
 
 impl<'a> Add for Error<'a> {
     type Output = Error<'a>;
