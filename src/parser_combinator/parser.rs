@@ -1,3 +1,5 @@
+use std::ops::RangeInclusive;
+
 use crate::{
     parser_combinator::continuation::ContinuationState, parser_combinator::error::*,
     parser_combinator::token::Token,
@@ -119,15 +121,6 @@ where
     _phantom: std::marker::PhantomData<&'a Output>,
 }
 
-impl<'a, Output: Clone + 'a, F: Clone> ClosureParser<'a, Output, F>
-where
-    F: Fn(ContinuationState<'a>) -> ParseResult<'a, Output>,
-{
-    fn new(parser: F) -> impl Parser<'a, Output> {
-        parser_from_fn(parser)
-    }
-}
-
 pub fn parser_from_fn<'a, Output: Clone + 'a, F: Clone>(parser: F) -> impl Parser<'a, Output>
 where
     F: Fn(ContinuationState<'a>) -> ParseResult<'a, Output>,
@@ -147,7 +140,7 @@ where
     }
 }
 
-fn pchar_impl<'a>(c: char, input: ContinuationState<'a>) -> ParseResult<'a, char> {
+fn pchar_impl(c: char, input: ContinuationState<'_>) -> ParseResult<'_, char> {
     let mut chars = input.remaining.chars();
     match chars.next() {
         Some(letter) if letter == c => {
@@ -174,16 +167,18 @@ fn pchar_impl<'a>(c: char, input: ContinuationState<'a>) -> ParseResult<'a, char
 fn pstring_impl<'a>(value: &'a str, input: ContinuationState<'a>) -> ParseResult<'a, &'a str> {
     let mut cont = input;
     let mut error = None;
-    let mut success = Vec::new();
     for t in value.chars() {
         let result = pchar_impl(t, cont);
         match result {
-            Ok((_, new_cont)) => {
-                success.push(t);
-                cont = new_cont
-            }
+            Ok((_, new_cont)) => cont = new_cont,
             Err(err) => {
-                let actual = success.iter().collect::<String>() + &err.actual;
+                let length = err.position - input.position + 1;
+                let actual = if input.remaining.len() < length {
+                    input.remaining[0..].to_string()
+                } else {
+                    input.remaining[0..length].to_string()
+                };
+
                 error = Some(Err(Error::new(
                     value.to_string(),
                     actual.to_string(),
@@ -274,6 +269,54 @@ where
         let token = Token::new(result, token.start, token.length);
         (token, state)
     })
+}
+
+fn pws_impl(input: ContinuationState<'_>) -> ParseResult<'_, ()> {
+    let next_char = input.remaining.chars().next();
+    if let Some(next_char) = next_char {
+        if next_char.is_whitespace() {
+            let parser_state = input.advance(1, next_char == '\n');
+            return Ok((Token::new((), input.position, 1), parser_state));
+        }
+    }
+
+    let actual = next_char.unwrap_or(' ').to_string();
+    let error = " ".to_string();
+    Err(Error::new(
+        error,
+        actual,
+        input.position,
+        input.line_number,
+        input.line_position,
+    ))
+}
+
+fn panyrange_impl<'a>(
+    valid_chars: &RangeInclusive<char>,
+    input: ContinuationState<'a>,
+) -> ParseResult<'a, char> {
+    let next_char = input.remaining.chars().next();
+    if let Some(next_char) = next_char {
+        if valid_chars.contains(&next_char) {
+            let parser_state = input.advance(1, next_char == '\n');
+            return Ok((Token::new(next_char, input.position, 1), parser_state));
+        }
+    }
+
+    let actual = next_char.unwrap_or(' ').to_string();
+    let error = valid_chars
+        .clone()
+        .map(|x| x.to_string())
+        .collect::<Vec<_>>()
+        .join(", ");
+
+    Err(Error::new(
+        error,
+        actual,
+        input.position,
+        input.line_number,
+        input.line_position,
+    ))
 }
 
 fn pany_impl<'a>(valid_chars: &[char], input: ContinuationState<'a>) -> ParseResult<'a, char> {
@@ -411,18 +454,18 @@ fn ptakeuntil_impl<'a, Until: Clone + 'a>(
     input: ContinuationState<'a>,
 ) -> ParseResult<'a, &'a str> {
     let result = until.parse(input);
-    let start = start.unwrap_or_else(|| input);
+    let start = start.unwrap_or(input);
     match result {
         Ok((_, cont)) => {
             let len = cont.position - start.position - 1;
-            return Ok((
+            Ok((
                 Token::new(&start.remaining[0..len], start.position, len),
                 cont,
-            ));
+            ))
         }
         Err(_) => {
             let cont = input.advance(1, false); //TODO line advances
-            return ptakeuntil_impl(until, Some(start), cont);
+            ptakeuntil_impl(until, Some(start), cont)
         }
     }
 }
@@ -440,7 +483,7 @@ impl<'a> Parser<'a, char> for CharParser {
 
 //TODO - can I make these using a macro????
 pub fn pchar<'a>(value: char) -> impl Parser<'a, char> {
-    CharParser { value: value }
+    CharParser { value }
 }
 
 #[derive(Clone)]
@@ -454,7 +497,7 @@ impl<'a> Parser<'a, &'a str> for StringParser<'a> {
     }
 }
 
-pub fn pstring<'a>(value: &'a str) -> impl Parser<'a, &str> {
+pub fn pstring(value: &str) -> impl Parser<'_, &str> {
     StringParser { value }
 }
 
@@ -558,6 +601,21 @@ impl<'a> Parser<'a, char> for AnyParser<'a> {
 
 pub fn pany(valid_chars: &[char]) -> impl Parser<char> {
     AnyParser { valid_chars }
+}
+
+#[derive(Clone)]
+struct AnyRangeParser {
+    valid_chars: RangeInclusive<char>,
+}
+
+impl<'a> Parser<'a, char> for AnyRangeParser {
+    fn parse(&self, input: ContinuationState<'a>) -> ParseResult<'a, char> {
+        panyrange_impl(&self.valid_chars, input)
+    }
+}
+
+pub fn pany_range<'a>(valid_chars: RangeInclusive<char>) -> impl Parser<'a, char> {
+    AnyRangeParser { valid_chars }
 }
 
 #[derive(Clone)]
@@ -821,6 +879,23 @@ fn ptake_until<'a, Until: Clone + 'a>(until: impl Parser<'a, Until>) -> impl Par
         until,
         _phantom: std::marker::PhantomData,
     }
+}
+
+#[derive(Clone)]
+struct WhitespaceParser;
+
+impl<'a> Parser<'a, ()> for WhitespaceParser {
+    fn parse(&self, input: ContinuationState<'a>) -> ParseResult<'a, ()> {
+        pws_impl(input)
+    }
+}
+
+pub fn pws<'a>() -> impl Parser<'a, ()> {
+    WhitespaceParser
+}
+
+pub fn pws_many<'a>() -> impl Parser<'a, ()> {
+    pws().many().map(|_| ())
 }
 
 #[macro_export]

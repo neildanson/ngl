@@ -247,7 +247,6 @@ fn test_correct_line_number_on_error() {
     assert_eq!(result, expected);
 }
 
-/*
 #[test]
 fn test_pchoice_success() {
     let parser = pchoice(vec![pchar('a'), pchar('b')]);
@@ -274,7 +273,7 @@ fn test_pchoice_fail() {
     let result = parser.parse("c".into());
     let expected = Err(Error::new("a or b".to_string(), "c".to_string(), 0, 0, 0));
     assert_eq!(result, expected);
-}*/
+}
 
 #[test]
 fn test_pchoice_fail_macro() {
@@ -307,6 +306,34 @@ fn test_pany_success() {
             line_position: 1,
         },
     ));
+    assert_eq!(result, expected);
+}
+
+#[test]
+fn test_pws_success() {
+    let parser = pws();
+    let result = parser.parse(" ".into());
+    let expected = Ok((
+        Token {
+            value: (),
+            start: 0,
+            length: 1,
+        },
+        ContinuationState {
+            remaining: "",
+            position: 1,
+            line_number: 0,
+            line_position: 1,
+        },
+    ));
+    assert_eq!(result, expected);
+}
+
+#[test]
+fn test_pws_fail() {
+    let parser = pws();
+    let result = parser.parse("d".into());
+    let expected = Err(Error::new(" ".to_string(), "d".to_string(), 0, 0, 0));
     assert_eq!(result, expected);
 }
 

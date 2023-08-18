@@ -52,7 +52,7 @@ fn parse_string_fail(c: &mut Criterion) {
 }
 
 fn parse_int_success(c: &mut Criterion) {
-    let any_number = pany(&['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']);
+    let any_number = pany_range('0'..='9');
     let many_numbers = any_number.many1();
     let number_parser = pchar('-').optional().then(many_numbers);
 
