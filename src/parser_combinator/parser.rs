@@ -102,13 +102,13 @@ pub trait Parser<'a, Output: Clone + 'a>: Clone {
     }
 }
 
-pub trait PairParser<'a, Left: Clone + 'a, Right: Clone + 'a> {
+pub trait Pair<'a, Left: Clone + 'a, Right: Clone + 'a> {
     fn left(self) -> impl Parser<'a, Left>;
     fn right(self) -> impl Parser<'a, Right>;
 }
 
 impl<'a, Left: Clone + 'a, Right: Clone + 'a, T: Parser<'a, (Token<Left>, Token<Right>)> + 'a>
-    PairParser<'a, Left, Right> for T
+    Pair<'a, Left, Right> for T
 {
     fn left(self) -> impl Parser<'a, Left> {
         pleft(self)
@@ -118,6 +118,20 @@ impl<'a, Left: Clone + 'a, Right: Clone + 'a, T: Parser<'a, (Token<Left>, Token<
         pright(self)
     }
 }
+
+/*/
+pub trait Many<'a, Output: Clone + 'a> {
+    fn at_least_one(self) -> impl Parser<'a, Output>;
+}
+
+impl<'a, Output: Clone + 'a, T: Parser<'a, Vec<Token<Output>>> + 'a>
+    Many<'a, Output> for T
+{
+    fn at_least_one(self) -> impl Parser<'a, Vec<Token<Output>>> {
+        p1(self)
+    }
+}
+*/
 
 #[derive(Clone)]
 struct ClosureParser<'a, Output, F>

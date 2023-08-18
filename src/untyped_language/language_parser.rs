@@ -46,7 +46,7 @@ fn pbool<'a>() -> impl Parser<'a, Value> {
 
 pub fn pquoted_string<'a>() -> impl Parser<'a, Value> {
     let pquote = pchar('"');
-    let pstring = pright(pquote.clone().then(pquote.take_until()));
+    let pstring = pquote.clone().then(pquote.take_until()).right();
     pstring.map(|string| Value::String(string.to_string()))
 }
 
