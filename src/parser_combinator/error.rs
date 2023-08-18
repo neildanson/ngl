@@ -1,66 +1,68 @@
 use std::{
     fmt::{self, Debug, Display, Formatter},
-    ops::Add,
+    ops::{Add, RangeInclusive},
 };
 
-#[derive(Clone, PartialEq)]
-pub enum Expected {
+#[derive(Clone, PartialEq, Debug)]
+pub enum Expected<'a> {
     Char(char),
-    String(String),
-    Range(char, char),
+    String(&'a str),
+    Range(RangeInclusive<char>),
+    Or(Box<Expected<'a>>, Box<Expected<'a>>),
+    And(Box<Expected<'a>>, Box<Expected<'a>>),
 }
 
-impl Add for Expected {
-    type Output = Expected;
-    fn add(self, rhs: Self) -> Self::Output {
-        match (self, rhs) {
-            (Expected::Char(c1), Expected::Char(c2)) => Expected::String(format!("{}{}", c1, c2)),
-            (Expected::Char(c1), Expected::String(s2)) => Expected::String(format!("{}{}", c1, s2)),
-            (Expected::String(s1), Expected::Char(c2)) => Expected::String(format!("{}{}", s1, c2)),
-            (Expected::String(s1), Expected::String(s2)) => {
-                Expected::String(format!("{}{}", s1, s2))
-            }
-            (Expected::Char(c1), Expected::Range(start, end)) => {
-                Expected::String(format!("{}{}-{}", c1, start, end))
-            }
-            (Expected::Range(start, end), Expected::Char(c2)) => {
-                Expected::String(format!("{}-{}{}", start, end, c2))
-            }
-            (Expected::String(s1), Expected::Range(start, end)) => {
-                Expected::String(format!("{}{}-{}", s1, start, end))
-            }
-            (Expected::Range(start, end), Expected::String(s2)) => {
-                Expected::String(format!("{}-{}{}", start, end, s2))
-            }
-            (Expected::Range(start1, end1), Expected::Range(start2, end2)) => {
-                Expected::String(format!("{}-{}{}-{}", start1, end1, start2, end2))
-            }
-        }
+impl<'a> From<char> for Expected<'a> {
+    fn from(c: char) -> Self {
+        Expected::Char(c)
     }
 }
 
-impl Display for Expected {
+impl<'a> From<&'a str> for Expected<'a> {
+    fn from(s: &'a str) -> Self {
+        Expected::String(s)
+    }
+}
+
+impl<'a> From<RangeInclusive<char>> for Expected<'a> {
+    fn from(r: RangeInclusive<char>) -> Self {
+        Expected::Range(r)
+    }
+}
+
+impl<'a> Add for Expected<'a> {
+    type Output = Expected<'a>;
+    fn add(self, rhs: Self) -> Self::Output {
+        Expected::Or(Box::new(self), Box::new(rhs))
+    }
+}
+
+impl<'a> Display for Expected<'a> {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         match self {
             Expected::Char(c) => write!(f, "'{}'", c),
             Expected::String(s) => write!(f, "'{}'", s),
-            Expected::Range(start, end) => write!(f, "between '{}' and '{}'", start, end),
+            Expected::Range(range) => {
+                write!(f, "between '{}' and '{}'", range.start(), range.end())
+            }
+            Expected::Or(lhs, rhs) => write!(f, "{} or {}", lhs, rhs),
+            Expected::And(lhs, rhs) => write!(f, "{} and {}", lhs, rhs),
         }
     }
 }
 
-#[derive(PartialEq)]
-pub struct Error {
-    pub expected: Expected,
+#[derive(PartialEq, Debug)]
+pub struct Error<'a> {
+    pub expected: Expected<'a>,
     pub actual: String,
     pub position: usize,
     pub line_number: usize,
     pub line_position: usize,
 }
 
-impl Error {
+impl<'a> Error<'a> {
     pub fn new(
-        expected: Expected,
+        expected: Expected<'a>,
         actual: String,
         position: usize,
         line_number: usize,
@@ -76,7 +78,7 @@ impl Error {
     }
     fn format_error(&self) -> String {
         format!(
-            "Expected '{}' but got '{}' at line: {}, column: {}",
+            "Expected {} but got {} at line: {}, column: {}",
             self.expected,
             self.actual,
             self.line_number + 1,
@@ -85,22 +87,24 @@ impl Error {
     }
 }
 
-impl Display for Error {
+impl<'a> Display for Error<'a> {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         write!(f, "{}", self.format_error())
     }
 }
 
-impl Debug for Error {
+/*
+impl<'a> Debug for Error<'a> {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         write!(f, "{}", self.format_error())
     }
 }
+*/
 
-impl Add for Error {
-    type Output = Error;
+impl<'a> Add for Error<'a> {
+    type Output = Error<'a>;
 
-    fn add(self, other: Error) -> Self::Output {
+    fn add(self, other: Error<'a>) -> Self::Output {
         let expected = self.expected + other.expected;
         let actual = other.actual.clone();
         let position = other.position;

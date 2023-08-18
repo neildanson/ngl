@@ -5,7 +5,7 @@ use crate::{
     parser_combinator::token::Token,
 };
 
-pub type ParseResult<'a, Output> = Result<(Token<Output>, ContinuationState<'a>), Error>;
+pub type ParseResult<'a, Output> = Result<(Token<Output>, ContinuationState<'a>), Error<'a>>;
 
 pub trait Parser<'a, Output: Clone + 'a>: Clone {
     fn parse(&self, input: ContinuationState<'a>) -> ParseResult<'a, Output>;
@@ -165,14 +165,14 @@ fn pchar_impl(c: char, input: ContinuationState<'_>) -> ParseResult<'_, char> {
             Ok((Token::new(c, input.position, 1), parser_state))
         }
         Some(letter) => Err(Error::new(
-            Expected::Char(c),
+            c.into(),
             letter.to_string(),
             input.position,
             input.line_number,
             input.line_position,
         )),
         None => Err(Error::new(
-            Expected::Char(c),
+            c.into(),
             "".to_string(),
             input.position,
             input.line_number,
@@ -197,7 +197,7 @@ fn pstring_impl<'a>(value: &'a str, input: ContinuationState<'a>) -> ParseResult
                 };
 
                 error = Some(Err(Error::new(
-                    Expected::String(value.to_string()),
+                    value.into(),
                     actual.to_string(),
                     err.position,
                     err.line_number,
@@ -322,7 +322,7 @@ fn panyrange_impl<'a>(
     let actual = next_char.unwrap_or(' ').to_string();
 
     Err(Error::new(
-        Expected::Range('1', '9'), //TODO
+        valid_chars.clone().into(),
         actual,
         input.position,
         input.line_number,
@@ -357,7 +357,7 @@ fn pany_impl<'a>(valid_chars: &[char], input: ContinuationState<'a>) -> ParseRes
     let actual = input.remaining.chars().next().unwrap_or(' ').to_string();
 
     Err(Error::new(
-        Expected::String("error".to_string()),
+        "error".into(),
         actual,
         input.position,
         input.line_number,
@@ -423,7 +423,7 @@ fn p1_impl<'a, Output: Clone + 'a>(
         Ok((token, cont)) => {
             if token.length == 0 {
                 Err(Error::new(
-                    Expected::String("1 or more".to_string()),
+                    "1 or more".into(),
                     cont.remaining.to_string(),
                     input.position,
                     input.line_number,
