@@ -354,9 +354,10 @@ fn test_pws_fail() {
 
 #[test]
 fn test_pany_fail() {
-    let parser = pany(&['a', 'b', 'c']);
+    let chars = ['a', 'b', 'c'];
+    let parser = pany(&chars);
     let result = parser.parse("d".into());
-    let expected = Err(Error::new("a, b or c".into(), "d".to_string(), 0, 0, 0));
+    let expected = Err(Error::new(chars.into(), "d".to_string(), 0, 0, 0));
     assert_eq!(result, expected);
 }
 

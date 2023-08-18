@@ -7,6 +7,7 @@ use std::{
 pub enum Expected<'a> {
     Char(char),
     String(&'a str),
+    Any(Vec<char>),
     Range(RangeInclusive<char>),
     Or(Box<Expected<'a>>, Box<Expected<'a>>),
     And(Box<Expected<'a>>, Box<Expected<'a>>),
@@ -30,6 +31,18 @@ impl<'a> From<RangeInclusive<char>> for Expected<'a> {
     }
 }
 
+impl<'a> From<&[char]> for Expected<'a> {
+    fn from(s: &[char]) -> Self {
+        Expected::Any(s.to_vec())
+    }
+}
+
+impl<'a, const N: usize> From<[char; N]> for Expected<'a> {
+    fn from(s: [char; N]) -> Self {
+        Expected::Any(s.to_vec())
+    }
+}
+
 impl<'a> Add for Expected<'a> {
     type Output = Expected<'a>;
     fn add(self, rhs: Self) -> Self::Output {
@@ -47,6 +60,23 @@ impl<'a> Display for Expected<'a> {
             }
             Expected::Or(lhs, rhs) => write!(f, "{} or {}", lhs, rhs),
             Expected::And(lhs, rhs) => write!(f, "{} and {}", lhs, rhs),
+            Expected::Any(chars) => {
+                let length = chars.len();
+                let error = if length >= 2 {
+                    let first = chars
+                        .iter()
+                        .take(length - 1)
+                        .map(|x| x.to_string())
+                        .collect::<Vec<_>>()
+                        .join(", ");
+                    first + " or " + &chars.last().unwrap().to_string()
+                } else if length == 1 {
+                    chars.first().unwrap().to_string()
+                } else {
+                    "".to_string() //TODO - this should never happen
+                };
+                write!(f, "{}", error)
+            }
         }
     }
 }

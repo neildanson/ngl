@@ -339,25 +339,10 @@ fn pany_impl<'a>(valid_chars: &[char], input: ContinuationState<'a>) -> ParseRes
         }
     }
 
-    let valid_chars_length = valid_chars.len();
-    /*let error = if valid_chars_length >= 2 {
-        let first = valid_chars
-            .iter()
-            .take(valid_chars.len() - 1)
-            .map(|x| x.to_string())
-            .collect::<Vec<_>>()
-            .join(", ");
-        first + " or " + &valid_chars.last().unwrap().to_string()
-    } else if valid_chars_length == 1 {
-        valid_chars.first().unwrap().to_string()
-    } else {
-        "".to_string() //TODO - this should never happen
-    };*/
-
     let actual = input.remaining.chars().next().unwrap_or(' ').to_string();
 
     Err(Error::new(
-        "error".into(),
+        valid_chars.into(),
         actual,
         input.position,
         input.line_number,
