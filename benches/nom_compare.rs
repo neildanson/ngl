@@ -39,7 +39,7 @@ fn pint<'a>() -> impl Parser<'a, Value<'a>> {
 
 fn pquoted_string_raw<'a>() -> impl Parser<'a, &'a str> {
     let pquote = pchar('"');
-    pright(pquote.clone().then(pquote.take_until())).ws()
+    pquote.clone().then(pquote.take_until()).right().ws()
 }
 
 fn pquoted_string<'a>() -> impl Parser<'a, Value<'a>> {
