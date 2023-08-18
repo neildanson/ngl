@@ -93,6 +93,13 @@ pub trait Parser<'a, Output: Clone + 'a>: Clone {
     {
         pbetween(parser1, self, parser2)
     }
+
+    fn ws(self) -> impl Parser<'a, Output>
+    where
+        Self: Sized + 'a,
+    {
+        pleft(self.then(pws_many()))
+    }
 }
 
 pub trait PairParser<'a, Left: Clone + 'a, Right: Clone + 'a> {
