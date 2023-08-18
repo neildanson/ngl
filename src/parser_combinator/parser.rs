@@ -5,7 +5,7 @@ use crate::{
     parser_combinator::token::Token,
 };
 
-pub type ParseResult<'a, Output> = Result<(Token<Output>, ContinuationState<'a>), Error>;
+pub type ParseResult<'a, Output> = Result<(Token<Output>, ContinuationState<'a>), Error<'a>>;
 
 pub trait Parser<'a, Output: Clone + 'a>: Clone {
     fn parse(&self, input: ContinuationState<'a>) -> ParseResult<'a, Output>;
@@ -165,14 +165,14 @@ fn pchar_impl(c: char, input: ContinuationState<'_>) -> ParseResult<'_, char> {
             Ok((Token::new(c, input.position, 1), parser_state))
         }
         Some(letter) => Err(Error::new(
-            c.to_string(),
+            c.into(),
             letter.to_string(),
             input.position,
             input.line_number,
             input.line_position,
         )),
         None => Err(Error::new(
-            c.to_string(),
+            c.into(),
             "".to_string(),
             input.position,
             input.line_number,
@@ -197,7 +197,7 @@ fn pstring_impl<'a>(value: &'a str, input: ContinuationState<'a>) -> ParseResult
                 };
 
                 error = Some(Err(Error::new(
-                    value.to_string(),
+                    value.into(),
                     actual.to_string(),
                     err.position,
                     err.line_number,
@@ -245,7 +245,7 @@ fn por_impl<'a, Output: Clone + 'a>(
             Ok((token, state)) => Ok((token, state)),
             Err(error2) => {
                 let error = Error::new(
-                    error.expected + " or " + &error2.expected,
+                    error.expected + error2.expected,
                     error2.actual,
                     error2.position,
                     error2.line_number,
@@ -298,9 +298,8 @@ fn pws_impl(input: ContinuationState<'_>) -> ParseResult<'_, ()> {
     }
 
     let actual = next_char.unwrap_or(' ').to_string();
-    let error = " ".to_string();
     Err(Error::new(
-        error,
+        Expected::Char(' '),
         actual,
         input.position,
         input.line_number,
@@ -321,14 +320,9 @@ fn panyrange_impl<'a>(
     }
 
     let actual = next_char.unwrap_or(' ').to_string();
-    let error = valid_chars
-        .clone()
-        .map(|x| x.to_string())
-        .collect::<Vec<_>>()
-        .join(", ");
 
     Err(Error::new(
-        error,
+        valid_chars.clone().into(),
         actual,
         input.position,
         input.line_number,
@@ -345,25 +339,10 @@ fn pany_impl<'a>(valid_chars: &[char], input: ContinuationState<'a>) -> ParseRes
         }
     }
 
-    let valid_chars_length = valid_chars.len();
-    let error = if valid_chars_length >= 2 {
-        let first = valid_chars
-            .iter()
-            .take(valid_chars.len() - 1)
-            .map(|x| x.to_string())
-            .collect::<Vec<_>>()
-            .join(", ");
-        first + " or " + &valid_chars.last().unwrap().to_string()
-    } else if valid_chars_length == 1 {
-        valid_chars.first().unwrap().to_string()
-    } else {
-        "".to_string() //TODO - this should never happen
-    };
-
     let actual = input.remaining.chars().next().unwrap_or(' ').to_string();
 
     Err(Error::new(
-        error,
+        valid_chars.into(),
         actual,
         input.position,
         input.line_number,
@@ -429,7 +408,7 @@ fn p1_impl<'a, Output: Clone + 'a>(
         Ok((token, cont)) => {
             if token.length == 0 {
                 Err(Error::new(
-                    "1 or more".to_string(),
+                    "1 or more".into(),
                     cont.remaining.to_string(),
                     input.position,
                     input.line_number,

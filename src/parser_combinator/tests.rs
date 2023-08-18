@@ -3,7 +3,7 @@ use super::*;
 fn test_pchar_eof() {
     let parser = pchar('H');
     let result = parser.parse("".into());
-    let expected = Err(Error::new("H".to_string(), "".to_string(), 0, 0, 0));
+    let expected = Err(Error::new(Expected::Char('H'), "".to_string(), 0, 0, 0));
     assert_eq!(result, expected);
 }
 
@@ -11,7 +11,7 @@ fn test_pchar_eof() {
 fn test_pchar_wrong_letter() {
     let parser = pchar('H');
     let result = parser.parse("c".into());
-    let expected = Err(Error::new("H".to_string(), "c".to_string(), 0, 0, 0));
+    let expected = Err(Error::new(Expected::Char('H'), "c".to_string(), 0, 0, 0));
     assert_eq!(result, expected);
 }
 
@@ -119,7 +119,13 @@ fn test_por_success_2() {
 fn test_por_success_fail() {
     let parser = pchar('H').or(pchar('h'));
     let result = parser.parse("e".into());
-    let expected = Err(Error::new("H or h".to_string(), "e".to_string(), 0, 0, 0));
+    let expected = Err(Error::new(
+        Expected::Or(Box::new('H'.into()), Box::new('h'.into())),
+        "e".to_string(),
+        0,
+        0,
+        0,
+    ));
     assert_eq!(result, expected);
 }
 
@@ -188,7 +194,7 @@ fn test_poptional_success_with_failure() {
 fn test_pstring_eof() {
     let h_parser = pstring("Hello");
     let result = h_parser.parse("Hell".into());
-    let expected = Err(Error::new("Hello".to_string(), "Hell".to_string(), 4, 0, 4));
+    let expected = Err(Error::new("Hello".into(), "Hell".to_string(), 4, 0, 4));
     assert_eq!(result, expected);
 }
 
@@ -196,7 +202,7 @@ fn test_pstring_eof() {
 fn test_pstring_wrong_letter() {
     let h_parser = pstring("Hello");
     let result = h_parser.parse("c".into());
-    let expected = Err(Error::new("Hello".to_string(), "c".to_string(), 0, 0, 0));
+    let expected = Err(Error::new("Hello".into(), "c".to_string(), 0, 0, 0));
     assert_eq!(result, expected);
 }
 
@@ -205,7 +211,7 @@ fn test_pstring_wrong_letter_after_other_parse() {
     let parser1 = pchar('c').then(pchar('w'));
     let parser = parser1.then(pstring("Hello"));
     let result = parser.parse("cwrong".into());
-    let expected = Err(Error::new("Hello".to_string(), "r".to_string(), 2, 0, 2));
+    let expected = Err(Error::new("Hello".into(), "r".to_string(), 2, 0, 2));
     assert_eq!(result, expected);
 }
 
@@ -234,7 +240,7 @@ fn test_pchar_followed_by_pstring_followed_by_failure() {
     let parser1 = pchar('c').then(pstring("Hello"));
     let parser = parser1.then(pchar('w'));
     let result = parser.parse("cHelloX".into());
-    let expected = Err(Error::new("w".to_string(), "X".to_string(), 6, 0, 6));
+    let expected = Err(Error::new(Expected::Char('w'), "X".to_string(), 6, 0, 6));
     assert_eq!(result, expected);
 }
 
@@ -243,7 +249,7 @@ fn test_correct_line_number_on_error() {
     let parser = pchar('\n').then(pchar('\n'));
     let parser = parser.then(pchar('a'));
     let result = parser.parse("\n\nb".into());
-    let expected = Err(Error::new("a".to_string(), "b".to_string(), 2, 2, 0));
+    let expected = Err(Error::new(Expected::Char('a'), "b".to_string(), 2, 2, 0));
     assert_eq!(result, expected);
 }
 
@@ -271,7 +277,13 @@ fn test_pchoice_success() {
 fn test_pchoice_fail() {
     let parser = pchoice(vec![pchar('a'), pchar('b')]);
     let result = parser.parse("c".into());
-    let expected = Err(Error::new("a or b".to_string(), "c".to_string(), 0, 0, 0));
+    let expected = Err(Error::new(
+        Expected::Or(Box::new('a'.into()), Box::new('b'.into())),
+        "c".to_string(),
+        0,
+        0,
+        0,
+    ));
     assert_eq!(result, expected);
 }
 
@@ -280,7 +292,10 @@ fn test_pchoice_fail_macro() {
     let parser = pchoice!(pchar('a'), pchar('b'), pchar('c'));
     let result = parser.parse("d".into());
     let expected = Err(Error::new(
-        "a or b or c".to_string(),
+        Expected::Or(
+            Box::new('a'.into()),
+            Box::new(Expected::Or(Box::new('b'.into()), Box::new('c'.into()))),
+        ),
         "d".to_string(),
         0,
         0,
@@ -333,21 +348,16 @@ fn test_pws_success() {
 fn test_pws_fail() {
     let parser = pws();
     let result = parser.parse("d".into());
-    let expected = Err(Error::new(" ".to_string(), "d".to_string(), 0, 0, 0));
+    let expected = Err(Error::new(Expected::Char(' '), "d".to_string(), 0, 0, 0));
     assert_eq!(result, expected);
 }
 
 #[test]
 fn test_pany_fail() {
-    let parser = pany(&['a', 'b', 'c']);
+    let chars = ['a', 'b', 'c'];
+    let parser = pany(&chars);
     let result = parser.parse("d".into());
-    let expected = Err(Error::new(
-        "a, b or c".to_string(),
-        "d".to_string(),
-        0,
-        0,
-        0,
-    ));
+    let expected = Err(Error::new(chars.into(), "d".to_string(), 0, 0, 0));
     assert_eq!(result, expected);
 }
 
@@ -448,13 +458,7 @@ fn test_between() {
 fn test_pmany1() {
     let parser = pchar('1').many1();
     let result = parser.parse("0".into());
-    let expected = Err(Error::new(
-        "1 or more".to_string(),
-        "0".to_string(),
-        0,
-        0,
-        0,
-    ));
+    let expected = Err(Error::new("1 or more".into(), "0".to_string(), 0, 0, 0));
 
     assert_eq!(result, expected);
 }
@@ -487,6 +491,6 @@ fn test_psepby() {
 fn test_psepby_missing_trail() {
     let parser = pchar('1').sep_by(pchar(','));
     let result = parser.parse("1,1,".into());
-    let expected = Err(Error::new("1".to_string(), "".to_string(), 4, 0, 4));
+    let expected = Err(Error::new(Expected::Char('1'), "".to_string(), 4, 0, 4));
     assert_eq!(result, expected);
 }

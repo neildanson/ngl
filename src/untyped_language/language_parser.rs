@@ -125,7 +125,7 @@ pub fn pbody<'a>() -> impl Parser<'a, Vec<Token<ExprOrStatement>>> {
     let expr_or_statement = call.or(plet());
     let expr_or_statement = expr_or_statement.then(pterminator()).left();
 
-    let pexprorstatement = expr_or_statement.many();
+    let pexprorstatement = expr_or_statement.many1();
     pexprorstatement.between(plbrace, prbrace)
 }
 
