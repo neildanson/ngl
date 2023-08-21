@@ -16,7 +16,7 @@ where
     fn parse(&self, input: ContinuationState<'a>) -> ParseResult<'a, Output> {
         let mut errors = Vec::new();
         for parser in self.parsers.iter() {
-            let result = parser.parse(input);
+            let result = parser.parse(input.clone());
             match result {
                 Ok((token, cont)) => return Ok((token, cont)),
                 Err(err) => errors.push(err),

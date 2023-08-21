@@ -33,8 +33,8 @@ fn ptakeuntil_impl<'a, Until: Clone + 'a>(
     start: Option<ContinuationState<'a>>,
     input: ContinuationState<'a>,
 ) -> ParseResult<'a, &'a str> {
-    let result = until.parse(input);
-    let start = start.unwrap_or(input);
+    let result = until.parse(input.clone());
+    let start = start.unwrap_or(input.clone());
     match result {
         Ok((_, cont)) => {
             let len = cont.position - start.position - 1;

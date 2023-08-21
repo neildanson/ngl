@@ -13,7 +13,7 @@ where
     P2: Parser<'a, Output>,
 {
     fn parse(&self, input: ContinuationState<'a>) -> ParseResult<'a, Output> {
-        let result1 = self.parser1.parse(input);
+        let result1 = self.parser1.parse(input.clone());
         result1.or_else(|error| {
             let result = self.parser2.parse(input);
             match result {

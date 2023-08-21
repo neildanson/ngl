@@ -4,7 +4,7 @@ pub(crate) fn pchar_impl(c: char, input: ContinuationState<'_>) -> ParseResult<'
     let mut chars = input.remaining.chars();
     match chars.next() {
         Some(letter) if letter == c => {
-            let parser_state = input.advance(1, letter == '\n');
+            let parser_state = input.clone().advance(1, letter == '\n');
             Ok((Token::new(c, input.position, 1), parser_state))
         }
         Some(letter) => Err(Error::new(

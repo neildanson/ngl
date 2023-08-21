@@ -8,7 +8,7 @@ impl<'a> Parser<'a, ()> for WhitespaceParser {
         let next_char = input.remaining.chars().next();
         if let Some(next_char) = next_char {
             if next_char.is_whitespace() {
-                let parser_state = input.advance(1, next_char == '\n');
+                let parser_state = input.clone().advance(1, next_char == '\n');
                 return Ok((Token::new((), input.position, 1), parser_state));
             }
         }

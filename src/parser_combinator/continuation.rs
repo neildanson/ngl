@@ -1,4 +1,8 @@
-#[derive(Debug, PartialEq, Clone, Copy)]
+use std::cell::RefCell;
+
+use super::Error;
+
+#[derive(Debug, PartialEq, Clone)]
 pub struct ContinuationState<'a> {
     pub remaining: &'a str,
     pub position: usize,

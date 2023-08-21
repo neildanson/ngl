@@ -11,7 +11,7 @@ impl<'a> Parser<'a, char> for AnyRangeParser {
         let next_char = input.remaining.chars().next();
         if let Some(next_char) = next_char {
             if self.valid_chars.contains(&next_char) {
-                let parser_state = input.advance(1, next_char == '\n');
+                let parser_state = input.clone().advance(1, next_char == '\n');
                 return Ok((Token::new(next_char, input.position, 1), parser_state));
             }
         }

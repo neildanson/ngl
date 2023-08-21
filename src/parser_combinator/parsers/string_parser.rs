@@ -7,10 +7,10 @@ struct StringParser<'a> {
 
 impl<'a> Parser<'a, &'a str> for StringParser<'a> {
     fn parse(&self, input: ContinuationState<'a>) -> ParseResult<'a, &'a str> {
-        let mut cont = input;
+        let mut cont = input.clone();
         let mut error = None;
         for t in self.value.chars() {
-            let result = char_parser::pchar_impl(t, cont);
+            let result = char_parser::pchar_impl(t, cont.clone());
             match result {
                 Ok((_, new_cont)) => cont = new_cont,
                 Err(err) => {

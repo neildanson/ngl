@@ -7,7 +7,7 @@ struct AnyParser<'a> {
 impl<'a> Parser<'a, char> for AnyParser<'a> {
     fn parse(&self, input: ContinuationState<'a>) -> ParseResult<'a, char> {
         for c in self.valid_chars.iter() {
-            let result = pchar_impl(*c, input);
+            let result = pchar_impl(*c, input.clone());
             match result {
                 Ok((token, state)) => return Ok((token, state)),
                 Err(_) => continue,

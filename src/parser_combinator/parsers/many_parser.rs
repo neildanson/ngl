@@ -12,10 +12,10 @@ where
 {
     fn parse(&self, input: ContinuationState<'a>) -> ParseResult<'a, Vec<Token<Output>>> {
         let mut results = Vec::new();
-        let mut cont = input;
+        let mut cont = input.clone();
         let mut error = None;
         while error.is_none() {
-            let result = self.parser.parse(cont);
+            let result = self.parser.parse(cont.clone());
             match result {
                 Ok((token, state)) => {
                     results.push(token);
@@ -29,8 +29,11 @@ where
 
         let len = results.len();
         match error {
-            Some(_) => Ok((Token::new(results, input.position, len), cont)),
-            None => Ok((Token::new(results, input.position, len), input)),
+            Some(_) => Ok((
+                Token::new(results, input.clone().position, len),
+                cont.clone(),
+            )),
+            None => Ok((Token::new(results, input.clone().position, len), input)),
         }
     }
 }

@@ -11,7 +11,7 @@ where
     P: Parser<'a, Output>,
 {
     fn parse(&self, input: ContinuationState<'a>) -> ParseResult<'a, Option<Output>> {
-        let result1 = self.parser.parse(input);
+        let result1 = self.parser.parse(input.clone());
         match result1 {
             Ok((token, state)) => Ok((
                 Token::new(Some(token.value), token.start, token.length),

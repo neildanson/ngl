@@ -14,7 +14,7 @@ where
     P: Parser<'a, Vec<Token<Output>>>,
 {
     fn parse(&self, input: ContinuationState<'a>) -> ParseResult<'a, Vec<Token<Output>>> {
-        let result = self.parser.parse(input);
+        let result = self.parser.parse(input.clone());
         match result {
             Ok((token, cont)) => {
                 if token.length == 0 {
