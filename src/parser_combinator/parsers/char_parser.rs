@@ -35,6 +35,16 @@ impl<'a> Parser<'a, char> for CharParser {
     }
 }
 
+/// Matches a single character.
+/// ```
+/// use ngl::parser_combinator::pchar;
+/// use ngl::parser_combinator::Parser;
+///
+/// let a = pchar('a');
+/// let result = a.parse("abc".into()).unwrap();
+/// assert_eq!(result.0.value, 'a');
+///
+/// ```
 pub fn pchar<'a>(value: char) -> impl Parser<'a, char> {
     CharParser { value }
 }
