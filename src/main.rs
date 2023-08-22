@@ -11,7 +11,11 @@ fn main() {
             let x = 1;
             let str = \"hello\";
             call(x, param, function(param_x,4));
-            for i = 0 .. 10 {
+            if true {
+                call(1);
+            };
+
+            for i = 0 .. 10 {     
                 call(i);
             };
         }"

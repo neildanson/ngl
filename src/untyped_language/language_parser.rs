@@ -106,11 +106,19 @@ pub fn pfor<'a>() -> impl Parser<'a, Statement> {
     let for_binding = for_binding.then(pidentifier()).right().ws();
     let for_binding = for_binding.then(pchar('=').ws()).left();
     let for_binding = for_binding.then(prange()).ws();
-    let for_binding = for_binding.then(pbody());
+    let for_binding = for_binding.then(pbody().ws());
 
     for_binding.map(|(name_and_expr, body)| {
         Statement::For(name_and_expr.value.0, name_and_expr.value.1, body.value)
     })
+}
+
+pub fn pif<'a>() -> impl Parser<'a, Expr> {
+    let if_binding = pstring("if").ws();
+    let if_binding = if_binding.then(pexpr()).right().ws();
+    let if_binding = if_binding.then(pbody().ws());
+
+    if_binding.map(|(expr, body)| Expr::If(Box::new(expr), body.value))
 }
 
 pub fn pcall<'a>() -> impl Parser<'a, Expr> {
@@ -131,19 +139,25 @@ pub fn pcall<'a>() -> impl Parser<'a, Expr> {
 
 pub fn pexpr<'a>() -> impl Parser<'a, Expr> {
     let value = pvalue().map(Expr::Value);
-    pchoice!(value, pcall(), pidentifier().map(Expr::Ident))
+    pchoice!(
+        value,
+        pif(),
+        pcall(),
+        pidentifier().map(Expr::Ident) //prange()
+    )
+    .ws()
 }
 
 pub fn pstatement<'a>() -> impl Parser<'a, Statement> {
-    pchoice!(pfor(), plet())
+    pchoice!(pfor(), plet()).ws()
 }
 
 pub fn pbody<'a>() -> impl Parser<'a, Vec<Token<ExprOrStatement>>> {
     let plbrace = pchar('{').ws();
     let prbrace = pchar('}').ws();
 
-    let expr = pexpr().map(ExprOrStatement::Expr).ws();
-    let statement = pstatement().map(ExprOrStatement::Statement).ws();
+    let expr = pexpr().map(ExprOrStatement::Expr);
+    let statement = pstatement().map(ExprOrStatement::Statement);
     let expr_or_statement = statement.or(expr);
     let expr_or_statement = expr_or_statement.then(pterminator()).left();
 
