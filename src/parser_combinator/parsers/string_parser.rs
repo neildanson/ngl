@@ -16,14 +16,14 @@ impl<'a> Parser<'a, &'a str> for StringParser<'a> {
                 Err(err) => {
                     let length = err.position - input.position + 1;
                     let actual = if input.remaining.len() < length {
-                        input.remaining[0..].to_string()
+                        &input.remaining[0..]
                     } else {
-                        input.remaining[0..length].to_string()
+                        &input.remaining[0..length]
                     };
 
                     error = Some(Err(Error::new(
                         self.value.into(),
-                        actual.to_string(),
+                        actual,
                         err.position,
                         err.line_number,
                         err.line_position,

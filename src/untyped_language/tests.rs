@@ -238,7 +238,7 @@ fn test_identifier_fail() {
             )),
             Box::new('_'.into()),
         ),
-        "1".to_string(),
+        "1",
         0,
         0,
         0,

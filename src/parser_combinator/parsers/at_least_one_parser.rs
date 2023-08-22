@@ -20,7 +20,7 @@ where
                 if token.length == 0 {
                     Err(Error::new(
                         "1 or more".into(),
-                        cont.remaining.to_string(),
+                        cont.remaining,
                         input.position,
                         input.line_number,
                         input.line_position,
