@@ -81,10 +81,10 @@ impl<'a> Display for Expected<'a> {
     }
 }
 
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Debug, Clone)]
 pub struct Error<'a> {
     pub expected: Expected<'a>,
-    pub actual: String,
+    pub actual: &'a str,
     pub position: usize,
     pub line_number: usize,
     pub line_position: usize,
@@ -93,7 +93,7 @@ pub struct Error<'a> {
 impl<'a> Error<'a> {
     pub fn new(
         expected: Expected<'a>,
-        actual: String,
+        actual: &'a str,
         position: usize,
         line_number: usize,
         line_position: usize,
@@ -136,7 +136,7 @@ impl<'a> Add for Error<'a> {
 
     fn add(self, other: Error<'a>) -> Self::Output {
         let expected = self.expected + other.expected;
-        let actual = other.actual.clone();
+        let actual = other.actual;
         let position = other.position;
         let line_number = other.line_number;
         let line_position = other.line_position;

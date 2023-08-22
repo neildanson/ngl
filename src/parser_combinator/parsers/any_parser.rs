@@ -14,7 +14,11 @@ impl<'a> Parser<'a, char> for AnyParser<'a> {
             }
         }
 
-        let actual = input.remaining.chars().next().unwrap_or(' ').to_string();
+        let actual = if !input.remaining.is_empty() {
+            &input.remaining[0..1]
+        } else {
+            " "
+        };
 
         Err(Error::new(
             self.valid_chars.into(),

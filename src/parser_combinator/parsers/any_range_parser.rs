@@ -16,8 +16,11 @@ impl<'a> Parser<'a, char> for AnyRangeParser {
             }
         }
 
-        let actual = next_char.unwrap_or(' ').to_string();
-
+        let actual = if !input.remaining.is_empty() {
+            &input.remaining[0..1]
+        } else {
+            " "
+        };
         Err(Error::new(
             self.valid_chars.clone().into(),
             actual,

@@ -7,16 +7,16 @@ pub(crate) fn pchar_impl(c: char, input: ContinuationState<'_>) -> ParseResult<'
             let parser_state = input.advance(1, letter == '\n');
             Ok((Token::new(c, input.position, 1), parser_state))
         }
-        Some(letter) => Err(Error::new(
+        Some(_) => Err(Error::new(
             c.into(),
-            letter.to_string(),
+            &input.remaining[0..1],
             input.position,
             input.line_number,
             input.line_position,
         )),
         None => Err(Error::new(
             c.into(),
-            "".to_string(),
+            "",
             input.position,
             input.line_number,
             input.line_position,
