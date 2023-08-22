@@ -128,10 +128,10 @@ fn test_let() {
     let result = parser.parse("let x = 1".into());
     let expected = Ok((
         Token {
-            value: ExprOrStatement::Statement(Statement::Let(
+            value: Statement::Let(
                 Token::new("x".to_string(), 4, 1),
                 Token::new(Expr::Value(Value::Number(1)), 8, 1),
-            )),
+            ),
             start: 4,
             length: 5,
         },
