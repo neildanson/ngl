@@ -135,8 +135,8 @@ macro_rules! pchoice {
     ($head:expr, $($tail:expr),*) => ({
         parser_from_fn(
             move |input| {
-                let result1 = $head.parse(input);
-                result1.or_else(|error1|{
+                let result1 = $head.parse(input.clone());
+                result1.or_else(move |error1|{
                     let result = pchoice!($($tail),*).parse(input);
                     result.map_err(|error2| error1 + error2)
                 })

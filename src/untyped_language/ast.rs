@@ -12,11 +12,13 @@ pub enum Expr {
     Value(Value),
     Ident(String), //should this be token<string>?
     Call(Token<String>, Vec<Token<Expr>>),
+    Range(Box<Token<Expr>>, Box<Token<Expr>>),
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Statement {
     Let(Token<String>, Token<Expr>),
+    For(Token<String>, Token<Expr>, Vec<Token<ExprOrStatement>>),
 }
 
 #[derive(Debug, Clone, PartialEq)]
