@@ -57,7 +57,7 @@ fn parray<'a>() -> impl Parser<'a, Value<'a>> {
 }
 
 fn pvalue<'a>() -> impl Parser<'a, Value<'a>> {
-    pchoice!(pint(), pquoted_string(), parray())
+    pchoice!(pint, pquoted_string, parray, pvalue)
 }
 
 fn ppair<'a>() -> impl Parser<'a, (&'a str, Value<'a>)> {

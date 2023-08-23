@@ -127,6 +127,15 @@ impl<'a, Output: Clone + 'a, T: Parser<'a, Vec<Token<Output>>> + 'a> Many<'a, Ou
     }
 }
 
+impl<'a, Output: Clone + 'a, F: Clone, P: Parser<'a, Output>> Parser<'a, Output> for F
+where
+    F: Fn() -> P,
+{
+    fn parse(&self, input: ContinuationState<'a>) -> ParseResult<'a, Output> {
+        self().parse(input)
+    }
+}
+
 #[macro_export]
 macro_rules! pchoice {
     ($head:expr) => ({
