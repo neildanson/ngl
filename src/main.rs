@@ -13,6 +13,8 @@ fn main() {
             call(x, param, function(param_x,4));
             if true {
                 call(1);
+            } else {
+                call(2);
             };
 
             for i = 0 .. 10 {     

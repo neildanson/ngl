@@ -117,8 +117,19 @@ pub fn pif<'a>() -> impl Parser<'a, Expr> {
     let if_binding = pstring("if").ws();
     let if_binding = if_binding.then(pexpr()).right().ws();
     let if_binding = if_binding.then(pbody().ws());
+    let else_binding = pstring("else").ws();
+    let else_binding = else_binding.then(pbody().ws()).right();
+    let else_binding = else_binding.optional();
 
-    if_binding.map(|(expr, body)| Expr::If(Box::new(expr), body.value))
+    if_binding
+        .then(else_binding)
+        .map(|(expr_and_body, else_body)| {
+            Expr::If(
+                Box::new(expr_and_body.value.0),
+                expr_and_body.value.1.value,
+                else_body.value,
+            )
+        })
 }
 
 pub fn pcall<'a>() -> impl Parser<'a, Expr> {

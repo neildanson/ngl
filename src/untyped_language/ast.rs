@@ -13,7 +13,11 @@ pub enum Expr {
     Ident(String), //should this be token<string>?
     Call(Token<String>, Vec<Token<Expr>>),
     Range(Box<Token<Expr>>, Box<Token<Expr>>),
-    If(Box<Token<Expr>>, Vec<Token<ExprOrStatement>>), //TODO else
+    If(
+        Box<Token<Expr>>,
+        Vec<Token<ExprOrStatement>>,
+        Option<Vec<Token<ExprOrStatement>>>,
+    ),
 }
 
 #[derive(Debug, Clone, PartialEq)]
