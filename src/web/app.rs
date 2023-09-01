@@ -38,9 +38,17 @@ struct Code {
 
 async fn code(Form(code): Form<Code>) -> impl IntoResponse {
     let parser = pfun();
+    let start = std::time::Instant::now();
     let result = parser.parse(code.code.as_str().into());
-    let result = format!("{:#?}", result);
+    let end = std::time::Instant::now();
+
+    let result = match result {
+        Ok(result) => format!("{:#?}", result),
+        Err(err) => err.to_string(),
+    };
+
     let template = CodeTemplate {
+        duration: format!("{:?}", end - start),
         result: result.to_string(),
     };
     HtmlTemplate(template)

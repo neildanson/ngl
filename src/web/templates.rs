@@ -1,8 +1,12 @@
+use std::time::Duration;
+
 use askama::Template;
 use axum::{
     http::StatusCode,
     response::{Html, IntoResponse, Response},
 };
+
+// See : https://djc.github.io/askama/template_syntax.html
 
 pub struct HtmlTemplate<T>(pub T);
 
@@ -32,5 +36,6 @@ pub struct HelloTemplate {
 #[derive(Template)]
 #[template(path = "code.html")]
 pub struct CodeTemplate {
+    pub duration: String,
     pub result: String,
 }
