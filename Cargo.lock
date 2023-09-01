@@ -758,6 +758,7 @@ dependencies = [
  "askama",
  "axum",
  "criterion",
+ "serde",
  "tokio",
  "tower-http",
  "wson",

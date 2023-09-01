@@ -1,0 +1,35 @@
+<html>
+    <head>
+        <title>NGL</title>
+        <script src="https://unpkg.com/htmx.org@1.9.5"></script>
+    </head>
+    <body>
+        <h1>NGL</h1>
+        <p>Click the button to load some content.</p>
+        <button hx-get="/greet" hx-target="#content" hx-swap="outerHTML transition:true">Load Content</button>
+        <div id="content"></div>
+        <textarea 
+            name="code" hx-post="/code" 
+            hx-trigger="load, keyup changed delay:1s"
+            hx-target="#result"
+            hx-swap="innerHTML transition:true"
+
+        rows="40" cols="200" >
+fun name(param: type, param_x: type_x) -> unit {
+    let x = 1;
+    let str = "hello";
+        call(x, param, function(param_x,4));
+    if true {
+        call(1);
+    } else {
+        call(2);
+    };
+    
+    for i = 0 .. 10 {     
+        call(i);
+    };
+}
+</textarea>
+        <div id="result"></div>
+    </body>
+</html>
