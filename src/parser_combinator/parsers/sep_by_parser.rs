@@ -1,3 +1,5 @@
+use std::vec;
+
 use super::*;
 
 #[derive(Clone)]
@@ -22,13 +24,16 @@ where
             .parser
             .clone()
             .then(self.separator.clone())
-            .left()
+            .left().optional()
             .many()
             .then(self.parser.clone());
-
+        //Test fails with malformed input. Need to fix
         let parser = parser.map(|(mut tokens, token)| {
-            tokens.value.push(token);
-            tokens.value
+                match token {
+                    Some(token) => { tokens.value.push(token);
+                        tokens.value},
+                    None => vec![],
+                }
         });
         parser.parse(input)
     }
