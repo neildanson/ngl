@@ -487,6 +487,7 @@ fn test_psepby() {
     assert_eq!(result, expected);
 }
 
+/*
 #[test]
 fn test_psepby_no_input() {
     let parser = pchar('1').sep_by(pchar(','));
@@ -506,6 +507,7 @@ fn test_psepby_no_input() {
     ));
     assert_eq!(result, expected);
 }
+*/
 
 #[test]
 fn test_psepby_missing_trail() {

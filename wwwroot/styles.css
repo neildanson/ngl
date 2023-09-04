@@ -1,11 +1,13 @@
 .red {
     background-color: orangered;
+    border: 1px solid black;
     color: black;
-    transition: all ease-in 1s ;
+    transition: all ease-in 1s;
 }
 
 .green {
     background-color: greenyellow;
+    border: 1px solid black;
     color: black;
-    transition: all ease-in 1s ;
+    transition: all ease-in 1s;
 }
