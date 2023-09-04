@@ -24,16 +24,13 @@ where
             .parser
             .clone()
             .then(self.separator.clone())
-            .left().optional()
+            .left()
             .many()
             .then(self.parser.clone());
-        //Test fails with malformed input. Need to fix
+
         let parser = parser.map(|(mut tokens, token)| {
-                match token {
-                    Some(token) => { tokens.value.push(token);
-                        tokens.value},
-                    None => vec![],
-                }
+            tokens.value.push(token);
+            tokens.value
         });
         parser.parse(input)
     }

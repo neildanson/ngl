@@ -1,0 +1,11 @@
+.red {
+    background-color: orangered;
+    color: black;
+    transition: all ease-in 1s ;
+}
+
+.green {
+    background-color: greenyellow;
+    color: black;
+    transition: all ease-in 1s ;
+}

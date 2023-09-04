@@ -1,5 +1,3 @@
-use std::time::Duration;
-
 use askama::Template;
 use axum::{
     http::StatusCode,
@@ -38,4 +36,5 @@ pub struct HelloTemplate {
 pub struct CodeTemplate {
     pub duration: String,
     pub result: String,
+    pub color: String,
 }
