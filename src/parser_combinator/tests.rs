@@ -487,6 +487,28 @@ fn test_psepby() {
     assert_eq!(result, expected);
 }
 
+/*
+#[test]
+fn test_psepby_no_input() {
+    let parser = pchar('1').sep_by(pchar(','));
+    let result = parser.parse("".into());
+    let expected = Ok((
+        Token {
+            value: vec![],
+            start: 0,
+            length: 0,
+        },
+        ContinuationState {
+            remaining: "",
+            position: 0,
+            line_number: 0,
+            line_position: 0,
+        },
+    ));
+    assert_eq!(result, expected);
+}
+*/
+
 #[test]
 fn test_psepby_missing_trail() {
     let parser = pchar('1').sep_by(pchar(','));

@@ -2,3 +2,4 @@
 #![feature(associated_type_bounds)]
 pub mod parser_combinator;
 pub mod untyped_language;
+pub mod web;

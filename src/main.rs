@@ -1,7 +1,8 @@
 use ngl::parser_combinator::*;
 use ngl::untyped_language::*;
 
-fn main() {
+#[tokio::main]
+async fn main() {
     let fun_binding = pfun();
 
     let start = std::time::Instant::now();
@@ -27,4 +28,5 @@ fn main() {
     let end = std::time::Instant::now();
 
     println!("{:#?} \n\nTook {:?}", result, (end - start));
+    ngl::web::app::run().await;
 }
