@@ -42,15 +42,27 @@ async fn code(Form(code): Form<Code>) -> impl IntoResponse {
     let result = parser.parse(code.code.as_str().into());
     let end = std::time::Instant::now();
 
-    let (result, color) = match result {
-        Ok(result) => (format!("{:#?}", result), "green".to_string()),
-        Err(err) => (err.to_string(), "red".to_string()),
+    let (result, color, success, success_style) = match result {
+        Ok(result) => (
+            format!("{:#?}", result),
+            "green".to_string(),
+            "Ok".to_string(),
+            "success".to_string(),
+        ),
+        Err(err) => (
+            err.to_string(),
+            "red".to_string(),
+            "Error".to_string(),
+            "danger".to_string(),
+        ),
     };
 
     let template = CodeTemplate {
         duration: format!("{:?}", end - start),
         result: result.to_string(),
         color,
+        success,
+        success_style,
     };
     HtmlTemplate(template)
 }

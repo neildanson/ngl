@@ -36,5 +36,7 @@ pub struct HelloTemplate {
 pub struct CodeTemplate {
     pub duration: String,
     pub result: String,
+    pub success: String,
+    pub success_style: String,
     pub color: String,
 }
